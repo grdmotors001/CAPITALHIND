@@ -1,14 +1,14 @@
 import { Navigate } from 'react-router-dom';
+import { getCurrentUser } from '../utils/session';
 
-// WIREFRAME: reads logged-in user from context/localStorage (replace with
-// real auth state — Supabase session / your existing PHP session bridge).
-// If no user or role not in `allow`, redirect to /login.
-
-function getCurrentUser() {
-  // TODO: replace with real session lookup
-  // e.g. return JSON.parse(localStorage.getItem('chf_user'));
-  return { id: 1, role: 'field_executive' }; // placeholder
-}
+// Reads the logged-in user (set by Login.jsx on successful login) from
+// localStorage. If nobody's logged in, or their role isn't in `allow`,
+// bounce to /login.
+//
+// NOTE: this is a UI-routing guard only, not the security boundary — every
+// API call under /api/dealer/* independently re-verifies the JWT
+// server-side (see api/_lib/auth.js), so a user can't get real data just by
+// tampering with localStorage here.
 
 export default function RoleGuard({ allow, children }) {
   const user = getCurrentUser();
