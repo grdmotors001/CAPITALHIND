@@ -1,0 +1,19 @@
+Phase 8 Database Placeholder Tables
+
+seized_vehicles
+parking_yard_master
+vehicle_parking_entries
+recovery_settlements
+vehicle_resale_disposal
+repossession_history
+recovery_dashboard_summary
+recovery_executive_performance
+
+Key Fields Notes:
+- vehicle_parking_entries.parking_type: enum('yard','factory','dealer')
+- vehicle_parking_entries.parking_ref_id: linked dealer_id (if parking_type = dealer)
+- seized_vehicles.status: enum('seized','parked','ready_for_sale','sold','released')
+- vehicle_resale_disposal.resale_mode: enum('cash','finance')
+- vehicle_resale_disposal.linked_loan_account_no: nullable, filled when resale_mode = finance
+
+Provider/Integration: None yet (manual entry in Phase 8; auction/marketplace integration future scope)
