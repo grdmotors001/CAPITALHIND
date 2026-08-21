@@ -9,6 +9,7 @@ import TeleCallerDashboard from '../apps/tele-caller/Dashboard';
 import DealerDashboard from '../apps/dealer/Dashboard';
 import LoanApplicationForm from '../apps/dealer/LoanApplicationForm';
 import CustomerPaymentDashboard from '../apps/customer-payment/Dashboard';
+import AdminDashboard from '../apps/admin/AdminDashboard';
 
 import AccountingLayout from '../layouts/AccountingLayout';
 import ChartOfAccounts from '../pages/accounting/ChartOfAccounts';
@@ -64,6 +65,16 @@ export default function AppRoutes() {
           element={
             <RoleGuard allow={[ROLE_KEYS.CUSTOMER, ROLE_KEYS.ADMIN]}>
               <CustomerPaymentDashboard />
+            </RoleGuard>
+          }
+        />
+
+        {/* --- Admin portal --- */}
+        <Route
+          path="/app/admin/*"
+          element={
+            <RoleGuard allow={[ROLE_KEYS.ADMIN]}>
+              <AdminDashboard />
             </RoleGuard>
           }
         />

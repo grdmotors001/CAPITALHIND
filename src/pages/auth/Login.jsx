@@ -4,6 +4,18 @@ import { getRedirectPathForRole } from '../../utils/roleRedirect';
 import { loginDealer } from '../../apps/dealer/api';
 import { setCurrentUser } from '../../utils/session';
 
+async function loginAdmin(identifier, password) {
+  const response = await fetch('/admin/react-login.php', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, password }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.error || 'Admin login failed');
+  return data;
+}
+
 // Single login screen shared by all 4 apps.
 // Dealer login is wired to the real /api/dealer/login endpoint (Vercel
 // serverless + Supabase, JWT-based). Field Executive / Tele Caller /
@@ -31,6 +43,17 @@ export default function Login() {
 
     setLoading(true);
     try {
+      // Admin/staff accounts live in the existing PHP/MySQL admin_users table.
+      // Try that first so the React portal can use the same credentials as the PHP portal.
+      try {
+        const adminResult = await loginAdmin(phone, password);
+        setCurrentUser(adminResult.user);
+        navigate(getRedirectPathForRole(adminResult.user.role));
+        return;
+      } catch {
+        // Not an admin/staff account; continue with the existing dealer login.
+      }
+
       const result = await loginDealer({ phone, password });
       setCurrentUser({
         id: result.user?.id,
@@ -78,7 +101,7 @@ export default function Login() {
 
       <div className="login-form-panel">
         <div className="login-card">
-          <span className="login-badge">STAFF · DEALER · FIELD EXECUTIVE</span>
+          <span className="login-badge">ADMIN · STAFF · DEALER · FIELD EXECUTIVE</span>
           <h1>
             Welcome <span className="accent">Back!</span>
           </h1>
@@ -109,15 +132,15 @@ export default function Login() {
 
           {mode === 'password' ? (
             <form onSubmit={handleLogin}>
-              <label htmlFor="phone">Phone number</label>
+              <label htmlFor="phone">Username / Mobile number</label>
               <div className="login-field">
                 <span className="icon">👤</span>
                 <input
                   id="phone"
-                  type="tel"
+                  type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="10-digit mobile number"
+                  placeholder="Username or 10-digit mobile number"
                   autoComplete="username"
                 />
               </div>
@@ -165,8 +188,7 @@ export default function Login() {
           <p className="login-footnote">📍 Your data is safe and secure with us.</p>
 
           <p className="hint">
-            Currently wired for Dealer login. Field Executive / Tele Caller /
-            Customer logins are still placeholders — see project README.
+            Admin/Staff login is now connected to the existing PHP/MySQL admin_users table. Dealer login remains on the existing API.
           </p>
         </div>
       </div>
