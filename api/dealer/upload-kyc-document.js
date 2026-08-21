@@ -68,9 +68,9 @@ export default async function handler(req, res) {
     return sendError(res, 422, 'Only JPG, PNG, or PDF files are allowed');
   }
 
-  const supabase = getSupabase();
-
   try {
+    const supabase = getSupabase();
+
     // Authorization check: application must belong to this dealer.
     const { data: application, error: appErr } = await supabase
       .from('loan_applications')

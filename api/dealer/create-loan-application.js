@@ -36,11 +36,13 @@ export default async function handler(req, res) {
     return res.status(422).json({ success: false, errors });
   }
 
-  const supabase = getSupabase();
   let customerId = null;
   let applicationId = null;
+  let supabase;
 
   try {
+    supabase = getSupabase();
+
     // 1. customer_profiles
     const aadhaarMasked = `XXXX-XXXX-${String(customer.aadhaar).slice(-4)}`;
     const { data: customerRow, error: customerErr } = await supabase
