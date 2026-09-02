@@ -72,6 +72,11 @@ const routes = {
   '/users/profile': route_users_profile,
   // Compatibility alias for older Vercel rewrites that pass only `profile`.
   '/profile': route_users_profile,
+  // Compatibility aliases for rewrites that pass only the endpoint suffix.
+  '/collection-history': route_field_executive_collection_history,
+  '/repossession': route_field_executive_repossession,
+  '/applicants': route_admin_applicants,
+  '/repo-cases': route_admin_repo_cases,
   '/staff/login': route_staff_login,
 };
 
