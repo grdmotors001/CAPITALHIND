@@ -1,8 +1,4 @@
 // api/_lib/auth.js
-// Vercel serverless functions are stateless (no PHP $_SESSION), so login
-// issues a signed JWT instead. The frontend sends it back as:
-//   Authorization: Bearer <token>
-// This also sidesteps CSRF entirely (no cookies involved in the auth check).
 
 import jwt from 'jsonwebtoken';
 
@@ -19,14 +15,18 @@ export function sendJson(res, status, body) {
 }
 
 export function sendError(res, status, message, extra) {
-  res.status(status).json({ success: false, error: message, ...(extra || {}) });
+  res.status(status).json({
+    success: false,
+    error: message,
+    ...(extra || {}),
+  });
 }
 
-// Reads + verifies the Bearer token, throws a {status, message} style error
-// via the response if invalid. Returns the decoded payload on success.
 export function requireDealerAuth(req, res) {
   const header = req.headers['authorization'] || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = header.startsWith('Bearer ')
+    ? header.slice(7)
+    : null;
 
   if (!token) {
     sendError(res, 401, 'Not logged in. Please login again.');
@@ -35,11 +35,80 @@ export function requireDealerAuth(req, res) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.type !== 'dealer_user' || !decoded.dealer_id || !decoded.dealer_user_id) {
+
+    if (
+      decoded.type !== 'dealer_user' ||
+      !decoded.dealer_id ||
+      !decoded.dealer_user_id
+    ) {
       sendError(res, 401, 'Invalid session. Please login again.');
       return null;
     }
-    return decoded; // { type, dealer_id, dealer_user_id, role }
+
+    return decoded;
+  } catch (e) {
+    sendError(res, 401, 'Session expired. Please login again.');
+    return null;
+  }
+}
+
+// Admin authentication
+export function requireAdminAuth(req, res) {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ')
+    ? header.slice(7)
+    : null;
+
+  if (!token) {
+    sendError(res, 401, 'Not logged in. Please login again.');
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (
+      decoded.type !== 'admin_user' ||
+      decoded.role !== 'admin' ||
+      !decoded.user_id
+    ) {
+      sendError(res, 401, 'Invalid admin session. Please login again.');
+      return null;
+    }
+
+    return decoded;
+  } catch (e) {
+    sendError(res, 401, 'Session expired. Please login again.');
+    return null;
+  }
+}
+
+// Generic auth for `users` table roles other than admin (field_executive,
+// tele_caller, customer, do). Pass the roles this endpoint accepts.
+export function requireUserAuth(req, res, allowRoles) {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ')
+    ? header.slice(7)
+    : null;
+
+  if (!token) {
+    sendError(res, 401, 'Not logged in. Please login again.');
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (
+      decoded.type !== 'app_user' ||
+      !decoded.user_id ||
+      !allowRoles.includes(decoded.role)
+    ) {
+      sendError(res, 401, 'Invalid session. Please login again.');
+      return null;
+    }
+
+    return decoded;
   } catch (e) {
     sendError(res, 401, 'Session expired. Please login again.');
     return null;
@@ -51,5 +120,6 @@ export function methodGuard(req, res, method) {
     sendError(res, 405, 'Method not allowed');
     return false;
   }
+
   return true;
 }

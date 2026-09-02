@@ -38,6 +38,17 @@ async function apiGet(path) {
   return data;
 }
 
+async function apiPatchJson(path, body) {
+  const res = await fetch(`${API_BASE}/${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
 async function apiPostJson(path, body) {
   const res = await fetch(`${API_BASE}/${path}`, {
     method: 'POST',
@@ -95,4 +106,12 @@ export function uploadKycDocument({ loanApplicationId, customerId, docType, file
   formData.append('doc_type', docType);
   formData.append('file', file);
   return apiPostFormData('upload-kyc-document', formData);
+}
+
+export function fetchDealerProfile() {
+  return apiGet('profile').then((d) => d.profile);
+}
+
+export function updateDealerProfile(body) {
+  return apiPatchJson('profile', body).then((d) => d.profile);
 }

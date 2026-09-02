@@ -34,7 +34,7 @@ function validateVehicleLoan(v) {
     errors.down_payment = 'Down payment, vehicle price se kam hona chahiye';
   }
   if (!v.tenure_months) errors.tenure_months = 'Tenure select karein';
-  return errors;
+    return errors;
 }
 
 function validateKyc(k) {
@@ -104,6 +104,7 @@ export default function LoanApplicationForm() {
           down_payment: vehicleLoan.down_payment,
           loan_amount_requested: vehicleLoan.loan_amount_requested,
           tenure_months: vehicleLoan.tenure_months,
+          physical_register_serial_no: vehicleLoan.physical_register_serial_no,
         },
         guarantors: guarantorData.guarantors || [],
       };

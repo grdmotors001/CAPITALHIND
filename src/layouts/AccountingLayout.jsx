@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet } from 'react-router-dom';
 
 // WIREFRAME: sidebar nav shell for the Accounting & Finance module.
 // <Outlet /> renders the active sub-page (Chart of Accounts, Cash Book, etc.)
@@ -20,6 +20,9 @@ export default function AccountingLayout() {
     <div className="accounting-shell">
       <aside className="accounting-sidebar">
         <div className="sidebar-title">Accounting & Finance</div>
+        <Link to="/app/admin" className="sidebar-link sidebar-home-link">
+          🏠 Home (Admin Dashboard)
+        </Link>
         <nav>
           {NAV_ITEMS.map((item) => (
             <NavLink

@@ -27,6 +27,7 @@ export default function StepReview({ formData }) {
           <div><span className="review-label">Down payment</span>\u20b9{Number(vehicleLoan.down_payment || 0).toLocaleString('en-IN')}</div>
           <div><span className="review-label">Loan amount</span>\u20b9{Number(vehicleLoan.loan_amount_requested || 0).toLocaleString('en-IN')}</div>
           <div><span className="review-label">Tenure</span>{vehicleLoan.tenure_months} months</div>
+          <div><span className="review-label">Physical register / ledger</span>{vehicleLoan.physical_register_serial_no || '—'}</div>
         </div>
       </div>
 

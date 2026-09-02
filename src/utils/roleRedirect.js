@@ -7,6 +7,8 @@ export const ROLE_KEYS = {
   DEALER: 'dealer',
   CUSTOMER: 'customer',
   ADMIN: 'admin',
+  DO: 'do',
+  TEAM_LEADER: 'team_leader',
 };
 
 export const ROLE_ROUTES = {
@@ -15,6 +17,8 @@ export const ROLE_ROUTES = {
   [ROLE_KEYS.DEALER]: '/app/dealer',
   [ROLE_KEYS.CUSTOMER]: '/app/customer-payment',
   [ROLE_KEYS.ADMIN]: '/app/admin',
+  [ROLE_KEYS.DO]: '/app/do',
+  [ROLE_KEYS.TEAM_LEADER]: '/app/team-leader',
 };
 
 // Called right after successful login. `role` comes from the auth/login API response.

@@ -10,6 +10,8 @@ import DealerDashboard from '../apps/dealer/Dashboard';
 import LoanApplicationForm from '../apps/dealer/LoanApplicationForm';
 import CustomerPaymentDashboard from '../apps/customer-payment/Dashboard';
 import AdminDashboard from '../apps/admin/AdminDashboard';
+import DODashboard from '../apps/do/Dashboard';
+import TeamLeaderDashboard from '../apps/team-leader/Dashboard';
 
 import AccountingLayout from '../layouts/AccountingLayout';
 import ChartOfAccounts from '../pages/accounting/ChartOfAccounts';
@@ -75,6 +77,26 @@ export default function AppRoutes() {
           element={
             <RoleGuard allow={[ROLE_KEYS.ADMIN]}>
               <AdminDashboard />
+            </RoleGuard>
+          }
+        />
+
+        {/* --- Team Leader portal --- */}
+        <Route
+          path="/app/team-leader/*"
+          element={
+            <RoleGuard allow={[ROLE_KEYS.TEAM_LEADER]}>
+              <TeamLeaderDashboard />
+            </RoleGuard>
+          }
+        />
+
+        {/* --- Disbursement Officer (DO) portal --- */}
+        <Route
+          path="/app/do/*"
+          element={
+            <RoleGuard allow={[ROLE_KEYS.DO, ROLE_KEYS.ADMIN]}>
+              <DODashboard />
             </RoleGuard>
           }
         />

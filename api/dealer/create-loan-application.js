@@ -82,6 +82,7 @@ export default async function handler(req, res) {
         down_payment: vehicleLoan.down_payment,
         loan_amount_requested: vehicleLoan.loan_amount_requested,
         tenure_months: vehicleLoan.tenure_months,
+        physical_register_serial_no: String(vehicleLoan.physical_register_serial_no || '').trim() || null,
         application_status: 'submitted',
         submitted_at: new Date().toISOString(),
       })

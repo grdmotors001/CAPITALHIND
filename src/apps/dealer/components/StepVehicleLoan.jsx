@@ -93,6 +93,18 @@ export default function StepVehicleLoan({ data, onChange, errors }) {
         </div>
 
         <div className="form-field">
+          <label>Physical register / ledger serial no. (optional)</label>
+          <input
+            value={data.physical_register_serial_no || ''}
+            onChange={(e) => set('physical_register_serial_no', e.target.value.toUpperCase())}
+            maxLength={50}
+            placeholder="e.g. REG-00125"
+          />
+          <span className="field-hint">Loan entry ke time Admin ledger / register no. enter karega; Team Leader ise Tele Caller ko assign karega.</span>
+          {errors.physical_register_serial_no && <span className="field-error">{errors.physical_register_serial_no}</span>}
+        </div>
+
+        <div className="form-field">
           <label>Tenure (months) *</label>
           <select value={data.tenure_months || ''} onChange={(e) => set('tenure_months', e.target.value)}>
             <option value="">Select tenure</option>

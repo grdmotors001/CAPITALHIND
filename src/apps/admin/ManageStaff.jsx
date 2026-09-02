@@ -3,6 +3,8 @@ import { createStaff, deleteStaff, listStaff, updateStaffContact } from './api';
 
 const emptyForm = { username: '', password: '', role: 'staff', contact_mobile: '', email: '' };
 
+const ROLE_LABELS = { staff: 'Staff', admin: 'Admin' };
+
 export default function ManageStaff() {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -57,6 +59,8 @@ export default function ManageStaff() {
     try {
       const data = await updateStaffContact({
         id: editing.id,
+        role: editing.role,
+        source: editing.source,
         contact_mobile: editing.contact_mobile || '',
         email: editing.email || '',
       });
@@ -74,7 +78,7 @@ export default function ManageStaff() {
     if (!window.confirm(`Remove account "${user.username}"?`)) return;
     setError(''); setMessage('');
     try {
-      const data = await deleteStaff(user.id);
+      const data = await deleteStaff(user);
       setMessage(data.message || 'Account removed.');
       await load();
     } catch (err) {
@@ -106,14 +110,14 @@ export default function ManageStaff() {
             <thead><tr><th>Username</th><th>Role</th><th>Mobile / Email</th><th>Added</th><th>Actions</th></tr></thead>
             <tbody>
               {loading ? <tr><td colSpan="5" className="empty-cell">Loading accounts…</td></tr> : users.length === 0 ? <tr><td colSpan="5" className="empty-cell">No staff accounts found.</td></tr> : users.map((user) => (
-                <tr key={user.id}>
+                <tr key={`${user.source}-${user.id}`}>
                   <td><strong>{user.username}</strong></td>
-                  <td><span className={`role-pill ${user.role}`}>{user.role}</span></td>
+                  <td><span className={`role-pill ${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span></td>
                   <td className="contact-text">
                     <div>{user.contact_mobile || <span className="muted">No mobile</span>}</div>
                     <div>{user.email || <span className="muted">No email</span>}</div>
                   </td>
-                  <td>{user.created_at || '—'}</td>
+                  <td>{user.created_at ? String(user.created_at).slice(0, 10) : '—'}</td>
                   <td className="actions-cell">
                     <button className="admin-btn small secondary" onClick={() => beginEdit(user)}>Edit contact</button>
                     {user.is_current ? <span className="you-tag">You</span> : <button className="admin-btn small danger" onClick={() => remove(user)}>Remove</button>}
@@ -126,7 +130,7 @@ export default function ManageStaff() {
 
         {editing && (
           <form className="inline-edit" onSubmit={saveEdit}>
-            <div><label>Mobile (OTP login)</label><input maxLength="15" value={editing.contact_mobile || ''} onChange={(e) => setEditing({ ...editing, contact_mobile: e.target.value })} placeholder="98xxxxxxxx" /></div>
+            <div><label>Mobile (OTP login)</label><input maxLength="10" value={editing.contact_mobile || ''} onChange={(e) => setEditing({ ...editing, contact_mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="98xxxxxxxx" /></div>
             <div><label>Email (Google login)</label><input type="email" value={editing.email || ''} onChange={(e) => setEditing({ ...editing, email: e.target.value })} placeholder="name@gmail.com" /></div>
             <div className="edit-actions"><button className="admin-btn" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button><button type="button" className="admin-btn secondary" onClick={() => setEditing(null)}>Cancel</button></div>
           </form>
@@ -139,9 +143,9 @@ export default function ManageStaff() {
           <div className="form-grid">
             <div><label>Username</label><input value={form.username} onChange={(e) => updateForm('username', e.target.value)} required autoComplete="off" /></div>
             <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={(e) => updateForm('password', e.target.value)} minLength="8" required autoComplete="new-password" /></div>
-            <div><label>Role</label><select value={form.role} onChange={(e) => updateForm('role', e.target.value)}><option value="staff">Staff — view records & verify/reject UPI payments</option><option value="admin">Admin — staff permissions + manage accounts</option></select></div>
-            <div><label>Mobile <span>(optional — OTP login)</span></label><input value={form.contact_mobile} onChange={(e) => updateForm('contact_mobile', e.target.value)} maxLength="15" placeholder="98xxxxxxxx" /></div>
-            <div className="full"><label>Email <span>(optional — Google login)</span></label><input type="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="name@gmail.com" /></div>
+            <div><label>Role</label><select value={form.role} onChange={(e) => updateForm('role', e.target.value)}><option value="staff">Staff — view records & verify/reject UPI payments</option><option value="admin">Admin — full access, manage accounts</option></select></div>
+            <div><label>Mobile {form.role === 'admin' ? <span>(login id, 10 digits)</span> : <span>(optional — OTP login)</span>}</label><input value={form.contact_mobile} onChange={(e) => updateForm('contact_mobile', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" placeholder="98xxxxxxxx" required={form.role === 'admin' && !form.email} /></div>
+            <div className="full"><label>Email {form.role === 'admin' ? <span>(required if mobile is blank)</span> : <span>(optional — Google login)</span>}</label><input type="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="name@gmail.com" required={form.role === 'admin' && !form.contact_mobile} /></div>
           </div>
           <button className="admin-btn" disabled={saving}>{saving ? 'Creating…' : '+ Create account'}</button>
         </form>
