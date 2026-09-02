@@ -79,6 +79,7 @@ const routes = {
   '/collection-history': route_field_executive_collection_history,
   '/repossession': route_field_executive_repossession,
   '/applicants': route_admin_applicants,
+  '/reports': route_admin_reports,
   '/repo-cases': route_admin_repo_cases,
   '/loan-ledger': route_admin_loan_ledger,
   '/expense-master': route_admin_expense_master,
@@ -161,7 +162,8 @@ import route_staff_login from '../lib/api/staff/login.js';
 export default async function handler(req, res) {
   const rawPath = req.query?.path;
   const pathParts = Array.isArray(rawPath) ? rawPath : (rawPath ? [rawPath] : []);
-  let routePath = '/' + pathParts.join('/');
+  const rawJoined = pathParts.join('/');
+  let routePath = '/' + rawJoined;
 
   // Support both direct catch-all requests (/api/users/profile) and Vercel
   // rewrites such as /api/users?path=profile. In the latter case req.query.path
@@ -170,7 +172,6 @@ export default async function handler(req, res) {
     const pathname = new URL(req.url || '/', 'https://chfpl.local').pathname.replace(/\/$/, '');
     if (pathname.startsWith('/api/') && pathname !== '/api') {
       const pathnameTail = pathname.slice(4); // keep leading slash: /users[/profile]
-      const rawJoined = pathParts.join('/');
       if (rawJoined && (pathnameTail === '/' + rawJoined || pathnameTail.endsWith('/' + rawJoined))) {
         routePath = pathnameTail;
       } else if (rawJoined) {
