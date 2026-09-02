@@ -89,6 +89,22 @@ export default async function handler(req,res){
         const cibil=num(r.cibil_score);
         const ledger=clean(r.ledger_no)||clean(r.physical_register_serial_no);
 
+        // Legacy Excel imports often contain only the FI Executive name.
+        // Resolve an exact, unique active Field Executive to assigned_fe_id so
+        // existing/disbursed loans remain collectible by that FE.
+        let assignedFeId = null;
+        const fiExecutiveName = clean(r.fi_executive_name);
+        if (fiExecutiveName) {
+          const { data: feMatches, error: feLookupErr } = await s
+            .from('users')
+            .select('id')
+            .eq('role', 'field_executive')
+            .eq('is_active', true)
+            .ilike('full_name', fiExecutiveName);
+          if (feLookupErr) throw feLookupErr;
+          if ((feMatches || []).length === 1) assignedFeId = feMatches[0].id;
+        }
+
         const payload={
           application_no:clean(r.application_no)||`IMP-${Date.now()}-${i+1}`,
           loan_account_no:loanNo, application_status:appStatus, customer_id:customerId,
@@ -109,6 +125,10 @@ export default async function handler(req,res){
           case_status:caseStatus, disbursement_date:disbDate, disbursed_amount:num(r.disbursed_amount),
           receipt_entry_manual:true
         };
+        if (assignedFeId) {
+          payload.assigned_fe_id = assignedFeId;
+          payload.assigned_at = new Date().toISOString();
+        }
         if(appStatus==='disbursed' && !payload.disbursement_date) payload.disbursement_date=new Date().toISOString().slice(0,10);
         if(caseStatus==='vehicle_seized') payload.vehicle_seized_at=iso(r.vehicle_seized_at)||new Date().toISOString();
         else if(r.vehicle_seized_at) payload.vehicle_seized_at=iso(r.vehicle_seized_at);
