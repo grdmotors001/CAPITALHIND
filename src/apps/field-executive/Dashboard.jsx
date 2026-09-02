@@ -26,6 +26,9 @@ export default function FieldExecutiveDashboard() {
   const [form, setForm] = useState(emptyFiForm);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [collectionOpen, setCollectionOpen] = useState(false);
+  const [collectionSearch, setCollectionSearch] = useState('');
+  const [selectedCollectionLoan, setSelectedCollectionLoan] = useState(null);
   const [collectingId, setCollectingId] = useState(null);
   const [collectionAmount, setCollectionAmount] = useState('');
   const [collectionRemarks, setCollectionRemarks] = useState('');
@@ -104,6 +107,22 @@ export default function FieldExecutiveDashboard() {
     }
   }
 
+  function openCollection() {
+    setCollectionOpen(true);
+    setCollectionSearch('');
+    setSelectedCollectionLoan(null);
+    setCollectionAmount('');
+    setCollectionRemarks('');
+    setError(''); setMessage('');
+  }
+
+  function selectCollectionLoan(app) {
+    setSelectedCollectionLoan(app);
+    setCollectionAmount(app.emi_amount ? String(app.emi_amount) : '');
+    setCollectionRemarks('');
+    setError('');
+  }
+
   async function handleCollectCash(app) {
     const amount = Number(collectionAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -117,8 +136,11 @@ export default function FieldExecutiveDashboard() {
         amount,
         remarks: collectionRemarks,
       });
-      setMessage(data.message || 'Cash collection recorded.');
+      setMessage(data.message || 'EMI cash collection recorded.');
       setCollectionAmount(''); setCollectionRemarks('');
+      setSelectedCollectionLoan(null);
+      setCollectionSearch('');
+      setCollectionOpen(false);
       await load();
     } catch (err) {
       setError(err.message);
@@ -127,11 +149,24 @@ export default function FieldExecutiveDashboard() {
     }
   }
 
+  const collectableStatuses = new Set(['approved', 'sanctioned', 'disbursed']);
+  const collectionCandidates = applications.filter((app) => collectableStatuses.has(app.application_status));
+  const searchTerm = collectionSearch.trim().toLowerCase();
+  const collectionMatches = collectionCandidates.filter((app) => {
+    if (!searchTerm) return true;
+    return [app.customer_name, app.customer_phone, app.vehicle_no, app.application_no, app.loan_account_no]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(searchTerm));
+  });
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <span>Field Executive App{user?.name ? ` — ${user.name}` : ''}</span>
-        <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button type="button" className="admin-btn small" onClick={openCollection}>💰 Collect EMI's</button>
+          <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
+        </div>
       </header>
       <main className="app-body">
         {message && <div className="admin-alert success">✓ {message}</div>}
@@ -225,23 +260,7 @@ export default function FieldExecutiveDashboard() {
                     <td>{app.fi_recommendation ? <span className={`role-pill ${app.fi_recommendation === 'positive' ? 'field_executive' : 'staff'}`}>{app.fi_recommendation}</span> : '—'}</td>
                     <td>{app.application_status}</td>
                     <td className="actions-cell">
-                      {app.application_status === 'disbursed' ? (
-                        <div style={{ minWidth: 220 }}>
-                          <input type="number" min="0.01" step="0.01" placeholder="Cash amount"
-                            value={collectingId === app.id ? collectionAmount : ''}
-                            onChange={e => { setCollectingId(app.id); setCollectionAmount(e.target.value); }} />
-                          {collectingId === app.id && (
-                            <>
-                              <input style={{ marginTop: 6 }} placeholder="Remarks (optional)"
-                                value={collectionRemarks} onChange={e => setCollectionRemarks(e.target.value)} />
-                              <button type="button" className="admin-btn small" style={{ marginTop: 6 }}
-                                onClick={() => handleCollectCash(app)}>
-                                ✓ Collect Cash
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      ) : <span className="muted">Available after disbursement</span>}
+                      {collectableStatuses.has(app.application_status) ? <span className="muted">Eligible — use Collect EMI's above</span> : <span className="muted">Not available</span>}
                     </td>
                   </tr>
                 ))}
@@ -249,6 +268,66 @@ export default function FieldExecutiveDashboard() {
             </table>
           </div>
         </section>
+
+        {collectionOpen && (
+          <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div className="admin-card" style={{ width: 'min(680px, 100%)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div className="admin-card-title">
+                <div><h2>Collect EMI's</h2><span>Search assigned loans by vehicle no., mobile no. or customer name</span></div>
+                <button type="button" className="admin-btn secondary" onClick={() => setCollectionOpen(false)}>✕ Close</button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                <input
+                  autoFocus
+                  value={collectionSearch}
+                  onChange={(e) => { setCollectionSearch(e.target.value); setSelectedCollectionLoan(null); }}
+                  placeholder="Search Vehicle No. / Mobile No. / Customer Name"
+                />
+
+                <div style={{ border: '1px solid #eee', borderRadius: 10, maxHeight: 260, overflowY: 'auto' }}>
+                  {collectionMatches.length === 0 ? (
+                    <div className="empty-cell">No approved/sanctioned/disbursed assigned loan found.</div>
+                  ) : collectionMatches.map((app) => (
+                    <button
+                      type="button"
+                      key={app.id}
+                      onClick={() => selectCollectionLoan(app)}
+                      style={{ width: '100%', textAlign: 'left', border: 0, borderBottom: '1px solid #eee', background: selectedCollectionLoan?.id === app.id ? '#fff4ec' : '#fff', padding: '12px 14px', cursor: 'pointer' }}
+                    >
+                      <strong>{app.customer_name || 'Customer'}</strong>
+                      <div style={{ fontSize: 13, marginTop: 3 }}>
+                        {app.customer_phone || 'No mobile'} · {app.vehicle_no || 'No vehicle no.'}
+                      </div>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
+                        {app.application_no || app.loan_account_no || 'Loan'} · {app.application_status} · EMI ₹{Number(app.emi_amount || 0).toLocaleString('en-IN')}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {selectedCollectionLoan && (
+                  <div style={{ borderTop: '1px solid #eee', paddingTop: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div><label>Name</label><input value={selectedCollectionLoan.customer_name || ''} readOnly /></div>
+                      <div><label>Mobile No.</label><input value={selectedCollectionLoan.customer_phone || ''} readOnly /></div>
+                      <div><label>Vehicle No.</label><input value={selectedCollectionLoan.vehicle_no || ''} readOnly /></div>
+                      <div><label>Loan Status</label><input value={selectedCollectionLoan.application_status || ''} readOnly /></div>
+                      <div><label>EMI Amount</label><input type="number" min="0.01" step="0.01" value={collectionAmount} onChange={(e) => setCollectionAmount(e.target.value)} /></div>
+                      <div><label>Remarks</label><input value={collectionRemarks} onChange={(e) => setCollectionRemarks(e.target.value)} placeholder="Optional" /></div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                      <button type="button" className="admin-btn" disabled={collectingId === selectedCollectionLoan.id} onClick={() => handleCollectCash(selectedCollectionLoan)}>
+                        {collectingId === selectedCollectionLoan.id ? 'Saving…' : '✓ Collect EMI'}
+                      </button>
+                      <button type="button" className="admin-btn secondary" onClick={() => { setSelectedCollectionLoan(null); setCollectionAmount(''); setCollectionRemarks(''); }}>Clear</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
