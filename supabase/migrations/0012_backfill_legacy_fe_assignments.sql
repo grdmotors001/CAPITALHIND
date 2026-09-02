@@ -4,12 +4,20 @@
 -- active Field Executive are linked automatically.
 
 WITH unique_fe AS (
-  SELECT lower(trim(full_name)) AS name_key, min(id) AS id
+  SELECT
+    lower(trim(full_name)) AS name_key,
+    id
   FROM users
   WHERE role = 'field_executive'
     AND is_active = true
-  GROUP BY lower(trim(full_name))
-  HAVING count(*) = 1
+    AND lower(trim(full_name)) IN (
+      SELECT lower(trim(full_name))
+      FROM users
+      WHERE role = 'field_executive'
+        AND is_active = true
+      GROUP BY lower(trim(full_name))
+      HAVING count(*) = 1
+    )
 )
 UPDATE loan_applications AS la
 SET

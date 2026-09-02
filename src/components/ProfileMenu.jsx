@@ -90,8 +90,11 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { setError('Please select an image.'); return; }
-    try { setForm(f => ({ ...f, profile_photo: await resizePhoto(file) })); setError(''); }
-    catch (e) { setError(e.message || 'Could not process photo'); }
+    try {
+      const photo = await resizePhoto(file);
+      setForm(f => ({ ...f, profile_photo: photo }));
+      setError('');
+    } catch (e) { setError(e.message || 'Could not process photo'); }
     e.target.value = '';
   }
 
