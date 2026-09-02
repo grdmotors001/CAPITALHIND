@@ -34,6 +34,30 @@ function resizePhoto(file) {
   });
 }
 
+async function profileRequest(method, token, body) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  if (body) headers['Content-Type'] = 'application/json';
+
+  // Primary route. The fallback keeps profile usable on deployments that still
+  // have the older /api/users?path=profile rewrite.
+  let res = await fetch('/api/users/profile', {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = await res.json().catch(() => ({}));
+
+  if (res.status === 404 && data?.error?.includes('/profile')) {
+    res = await fetch('/api/profile', {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    data = await res.json().catch(() => ({}));
+  }
+  return { res, data };
+}
+
 export default function ProfileMenu({ compact = false, onUpdated }) {
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState(getCurrentUser() || {});
@@ -41,14 +65,14 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState('');
   const inputRef = useRef(null);
 
   async function loadProfile() {
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setSaved('');
     try {
       const token = tokenForRole(profile.role);
-      const res = await fetch('/api/users/profile', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await profileRequest('GET', token);
       if (!res.ok || !data.success) throw new Error(data.error || 'Could not load profile');
       setProfile(data.profile || {});
       setForm({
@@ -67,21 +91,17 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
   useEffect(() => { if (open) loadProfile(); }, [open]);
 
   async function save(e) {
-    e.preventDefault(); setSaving(true); setError('');
+    e.preventDefault(); setSaving(true); setError(''); setSaved('');
     try {
       const token = tokenForRole(profile.role);
-      const res = await fetch('/api/users/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ...form, current_phone: profile.phone || '' }),
-      });
-      const data = await res.json().catch(() => ({}));
+      const { res, data } = await profileRequest('PATCH', token, { ...form, current_phone: profile.phone || '' });
       if (!res.ok || !data.success) throw new Error(data.error || 'Could not update profile');
       setProfile(data.profile || {});
       const next = { ...(getCurrentUser() || {}), ...data.profile, name: data.profile?.full_name, role: profile.role };
       setCurrentUser(next);
       onUpdated?.(data.profile);
-      setOpen(false);
+      setSaved('Profile updated successfully');
+      setTimeout(() => setOpen(false), 650);
     } catch (e) { setError(e.message || 'Could not update profile'); }
     finally { setSaving(false); }
   }
@@ -98,35 +118,58 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
     e.target.value = '';
   }
 
-  const initials = (profile.full_name || profile.name || 'U').trim().charAt(0).toUpperCase();
+  const initials = (profile.full_name || profile.name || form.full_name || 'U').trim().charAt(0).toUpperCase();
+  const roleLabel = ({ field_executive: 'Field Executive', tele_caller: 'Tele Caller', team_leader: 'Team Leader', cashier: 'Cashier', staff: 'Staff', dealer: 'Dealer', customer: 'Customer', do: 'Disbursement Officer', admin: 'Administrator' })[profile.role] || 'User';
+
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} style={{ border: '1px solid #e7d7cf', background: '#fff', borderRadius: 10, padding: compact ? '6px 10px' : '8px 12px', display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 700, color: '#6e172c' }}>
-        {profile.profile_photo ? <img src={profile.profile_photo} alt="Profile" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} /> : <span style={{ width: 28, height: 28, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#f7e7dd', color: '#9b3c18' }}>{initials}</span>}
-        <span>{compact ? 'Profile' : (profile.full_name || profile.name || 'Profile')}</span>
+      <button type="button" className={`profile-trigger ${compact ? 'profile-trigger-compact' : ''}`} onClick={() => setOpen(true)} aria-label="Open my profile">
+        {profile.profile_photo ? <img src={profile.profile_photo} alt="Profile" /> : <span className="profile-avatar-small">{initials}</span>}
+        <span className="profile-trigger-name">{compact ? 'Profile' : (profile.full_name || profile.name || 'Profile')}</span>
       </button>
 
-      {open && <div role="dialog" aria-modal="true" onMouseDown={e => e.target === e.currentTarget && setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,.48)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-        <form onSubmit={save} style={{ width: 'min(720px,100%)', maxHeight: '92vh', overflowY: 'auto', background: '#fff', borderRadius: 16, padding: 22, boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div><h2 style={{ margin: 0, color: '#6e172c' }}>My Profile</h2><div style={{ color: '#777', marginTop: 4 }}>Update your personal details</div></div>
-            <button type="button" onClick={() => setOpen(false)} style={{ border: 0, background: '#f4eeee', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>✕</button>
+      {open && <div className="profile-modal-backdrop" role="dialog" aria-modal="true" onMouseDown={e => e.target === e.currentTarget && setOpen(false)}>
+        <form className="profile-modal" onSubmit={save}>
+          <div className="profile-modal-head">
+            <div>
+              <div className="profile-eyebrow">ACCOUNT SETTINGS</div>
+              <h2>My Profile</h2>
+              <p>Keep your personal and contact details up to date.</p>
+            </div>
+            <button type="button" className="profile-close" onClick={() => setOpen(false)} aria-label="Close">×</button>
           </div>
-          {error && <div className="admin-alert error" style={{ marginBottom: 12 }}>⚠ {error}</div>}
-          {loading ? <div style={{ padding: 30, textAlign: 'center' }}>Loading profile…</div> : <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
-              {form.profile_photo ? <img src={form.profile_photo} alt="Profile preview" style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '3px solid #f2ddd2' }} /> : <div style={{ width: 76, height: 76, borderRadius: '50%', display: 'grid', placeItems: 'center', background: '#f7e7dd', fontSize: 28, fontWeight: 800, color: '#9b3c18' }}>{initials}</div>}
-              <div><input ref={inputRef} type="file" accept="image/*" onChange={choosePhoto} style={{ display: 'none' }} /><button type="button" className="admin-btn secondary" onClick={() => inputRef.current?.click()}>📷 Change Photo</button><div style={{ fontSize: 12, color: '#777', marginTop: 5 }}>Photo is resized automatically.</div></div>
+
+          {error && <div className="profile-alert profile-alert-error">⚠ <span>{error}</span></div>}
+          {saved && <div className="profile-alert profile-alert-success">✓ <span>{saved}</span></div>}
+
+          {loading ? <div className="profile-loading"><div className="profile-spinner" />Loading your profile…</div> : <>
+            <div className="profile-identity-card">
+              <div className="profile-avatar-large">
+                {form.profile_photo ? <img src={form.profile_photo} alt="Profile preview" /> : <span>{initials}</span>}
+              </div>
+              <div className="profile-identity-copy">
+                <strong>{form.full_name || profile.full_name || profile.name || 'Your Name'}</strong>
+                <span>{roleLabel}</span>
+                <small>JPG/PNG photo · automatically resized</small>
+              </div>
+              <input ref={inputRef} type="file" accept="image/*" onChange={choosePhoto} hidden />
+              <button type="button" className="profile-photo-btn" onClick={() => inputRef.current?.click()}>📷 Change Photo</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <label>Name<input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
-              <label>DOB<input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} /></label>
-              <label>Father Name<input value={form.father_name} onChange={e => setForm({ ...form, father_name: e.target.value })} /></label>
-              <label>Mobile No.<input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 15) })} required /></label>
-              <label>Email<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label>
-              <label style={{ gridColumn: '1 / -1' }}>Address<textarea rows="3" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
+
+            <div className="profile-section-title">Personal details</div>
+            <div className="profile-grid">
+              <label className="profile-field"><span>Full Name <b>*</b></span><input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required placeholder="Enter full name" /></label>
+              <label className="profile-field"><span>Date of Birth</span><input type="date" value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} /></label>
+              <label className="profile-field"><span>Father Name</span><input value={form.father_name} onChange={e => setForm({ ...form, father_name: e.target.value })} placeholder="Enter father name" /></label>
+              <label className="profile-field"><span>Mobile Number <b>*</b></span><input inputMode="numeric" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 15) })} required placeholder="Enter mobile number" /></label>
+              <label className="profile-field"><span>Email Address</span><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@example.com" /></label>
+              <label className="profile-field profile-field-full"><span>Address</span><textarea rows="3" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Enter complete address" /></label>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}><button type="button" className="admin-btn secondary" onClick={() => setOpen(false)}>Cancel</button><button className="admin-btn" disabled={saving}>{saving ? 'Saving…' : 'Save Profile'}</button></div>
+
+            <div className="profile-modal-actions">
+              <button type="button" className="profile-btn profile-btn-light" onClick={() => setOpen(false)}>Cancel</button>
+              <button type="submit" className="profile-btn profile-btn-primary" disabled={saving}>{saving ? 'Saving…' : '✓ Save Profile'}</button>
+            </div>
           </>}
         </form>
       </div>}

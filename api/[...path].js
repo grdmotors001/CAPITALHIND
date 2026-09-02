@@ -68,6 +68,8 @@ const routes = {
   '/tele-caller/log-call': route_tele_caller_log_call,
   '/users/login': route_users_login,
   '/users/profile': route_users_profile,
+  // Compatibility alias for older Vercel rewrites that pass only `profile`.
+  '/profile': route_users_profile,
   '/staff/login': route_staff_login,
 };
 
