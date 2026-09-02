@@ -1,5 +1,5 @@
 // Hobby-plan compatibility: all API endpoints are served by this single catch-all Vercel function.
-// Original handlers are kept under server/api with their URL paths preserved.
+// Original handlers are kept under lib/api with their URL paths preserved.
 
 const routes = {
   '/admin/applicants': route_admin_applicants,
@@ -17,6 +17,8 @@ const routes = {
   '/admin/list-loan-applications': route_admin_list_loan_applications,
   '/admin/list-users': route_admin_list_users,
   '/admin/loan-cases': route_admin_loan_cases,
+  '/admin/loan-ledger': route_admin_loan_ledger,
+  '/admin/expense-master': route_admin_expense_master,
   '/admin/login': route_admin_login,
   '/admin/masters/create-hp': route_admin_masters_create_hp,
   '/admin/masters/create-loan-type': route_admin_masters_create_loan_type,
@@ -77,6 +79,8 @@ const routes = {
   '/repossession': route_field_executive_repossession,
   '/applicants': route_admin_applicants,
   '/repo-cases': route_admin_repo_cases,
+  '/loan-ledger': route_admin_loan_ledger,
+  '/expense-master': route_admin_expense_master,
   '/staff/login': route_staff_login,
 };
 
@@ -95,6 +99,8 @@ import route_admin_list_approved_loans from '../lib/api/admin/list-approved-loan
 import route_admin_list_loan_applications from '../lib/api/admin/list-loan-applications.js';
 import route_admin_list_users from '../lib/api/admin/list-users.js';
 import route_admin_loan_cases from '../lib/api/admin/loan-cases.js';
+import route_admin_loan_ledger from '../lib/api/admin/loan-ledger.js';
+import route_admin_expense_master from '../lib/api/admin/expense-master.js';
 import route_admin_login from '../lib/api/admin/login.js';
 import route_admin_masters_create_hp from '../lib/api/admin/masters/create-hp.js';
 import route_admin_masters_create_loan_type from '../lib/api/admin/masters/create-loan-type.js';
@@ -175,7 +181,14 @@ export default async function handler(req, res) {
     // Fall back to Vercel's query-derived catch-all path above.
   }
 
-  const route = routes[routePath];
+  let route = routes[routePath];
+  if (!route && rawJoined) {
+    const suffix = '/' + rawJoined.replace(/^\/+/, '');
+    const pathname = (() => { try { return new URL(req.url || '/', 'https://chfpl.local').pathname.replace(/\/$/, ''); } catch { return ''; } })();
+    const groups = ['/admin','/collection','/cashier','/customer','/dealer','/do','/field-executive','/team-leader','/tele-caller','/users','/staff'];
+    const group = groups.find(g => pathname === '/api' + g || pathname.startsWith('/api' + g + '/'));
+    if (group) route = routes[group + suffix] || routes[suffix];
+  }
 
   if (!route) {
     return res.status(404).json({ success: false, error: `API route not found: ${routePath}` });

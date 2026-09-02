@@ -51,6 +51,7 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/masters/vehicle-models') ? 'active' : ''} to="/app/admin/masters/vehicle-models">🏍 <span>Vehicle Model</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/loan-types') ? 'active' : ''} to="/app/admin/masters/loan-types">₹ <span>Loan Type</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/batteries') ? 'active' : ''} to="/app/admin/masters/batteries">🔋 <span>Battery Master</span></Link>
+          <Link className={location.pathname.startsWith('/app/accounting/expense-management') ? 'active' : ''} to="/app/accounting/expense-management">💸 <span>Expense Master</span></Link>
           <Link to="/app/accounting">▦ <span>Accounting</span></Link>
         </nav>
         <div style={{ padding: '12px 16px' }}><ProfileMenu compact /></div>
@@ -106,6 +107,7 @@ function AdminHome() {
           <div className="dealer-kpi"><span>Total Approved</span><strong>{data?.approved_total ?? '—'}</strong><small>Current approved</small></div>
           <div className="dealer-kpi"><span>Total Disbursed</span><strong>{data?.disbursed_total ?? '—'}</strong><small>Current disbursed</small></div>
         </div>
+        <AdminCharts months={data?.months || []} />
         <div className="admin-month-grid">
           {(data?.months || []).map(m => <div className="admin-month-card" key={m.month}><b>{m.month}</b><div><span>Applied <strong>{m.applied}</strong></span><i style={{width:`${Math.max(6,m.applied/max*100)}%`}} /></div><div><span>Approved <strong>{m.approved}</strong></span><i style={{width:`${Math.max(6,m.approved/max*100)}%`}} /></div><div><span>Rejected <strong>{m.rejected}</strong></span><i style={{width:`${Math.max(6,m.rejected/max*100)}%`}} /></div><div><span>Disbursed <strong>{m.disbursement}</strong></span><i style={{width:`${Math.max(6,m.disbursement/max*100)}%`}} /></div><div><span>Vehicle seized <strong>{m.seized}</strong></span><i style={{width:`${Math.max(6,m.seized/max*100)}%`}} /></div></div>)}
         </div>
@@ -114,6 +116,26 @@ function AdminHome() {
       <ExportCibilCard />
     </div>
   );
+}
+
+function AdminCharts({ months }) {
+  const max = Math.max(1, ...(months || []).map(m => Math.max(m.applied || 0, m.approved || 0, m.disbursement || 0)));
+  const last = months?.[months.length - 1] || {};
+  const applied = Number(last.applied || 0), approved = Number(last.approved || 0), disbursed = Number(last.disbursement || 0);
+  const points = (months || []).map((m, i) => {
+    const x = months.length <= 1 ? 50 : (i / (months.length - 1)) * 100;
+    const y = 92 - (Number(m.disbursement || 0) / max) * 78;
+    return `${x},${y}`;
+  }).join(' ');
+  const circumference = 2 * Math.PI * 38;
+  const donutTotal = Math.max(1, applied + approved + disbursed);
+  const approvedPct = (approved / donutTotal) * 100;
+  const disbursedPct = (disbursed / donutTotal) * 100;
+  return <div className="admin-chart-grid">
+    <section className="admin-chart-card"><div className="admin-chart-head"><div><h3>Monthly Applications</h3><span>Applied vs approved</span></div><b>{applied}</b></div><div className="bar-chart">{(months || []).map(m => <div className="bar-group" key={m.month}><div className="bar-pair"><i style={{height:`${Math.max(4,(Number(m.applied||0)/max)*100)}%`}}></i><em style={{height:`${Math.max(4,(Number(m.approved||0)/max)*100)}%`}}></em></div><small>{m.month.split(' ')[0]}</small></div>)}</div><div className="chart-legend"><span><i className="legend-a"/>Applied</span><span><i className="legend-b"/>Approved</span></div></section>
+    <section className="admin-chart-card"><div className="admin-chart-head"><div><h3>Disbursement Trend</h3><span>Month-wise disbursed cases</span></div><b>{disbursed}</b></div><div className="line-chart"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Disbursement trend"><polyline points="0,92 100,92" fill="none" stroke="currentColor" strokeOpacity=".12" strokeWidth="1"/><polyline points={points || '0,92 100,92'} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg><div className="line-labels">{(months || []).map(m=><span key={m.month}>{m.month.split(' ')[0]}</span>)}</div></div></section>
+    <section className="admin-chart-card"><div className="admin-chart-head"><div><h3>Loan Status Mix</h3><span>Latest month composition</span></div><b>{donutTotal}</b></div><div className="donut-wrap"><div className="donut" style={{background:`conic-gradient(var(--maroon) 0 ${approvedPct}%, var(--orange) ${approvedPct}% ${approvedPct+disbursedPct}%, #e9e2df ${approvedPct+disbursedPct}% 100%)`}}><strong>{approved + disbursed}</strong><small>approved + disbursed</small></div><div className="donut-list"><span><i className="dot-a"/>Approved <b>{approved}</b></span><span><i className="dot-b"/>Disbursed <b>{disbursed}</b></span><span><i className="dot-c"/>Applied / other <b>{Math.max(0,donutTotal-approved-disbursed)}</b></span></div></div></section>
+  </div>;
 }
 
 function todayISO() {

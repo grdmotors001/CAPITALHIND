@@ -1,33 +1,15 @@
-# Vercel Hobby Deployment
+# Vercel Hobby deployment
 
-This project is intentionally structured to use **one** Vercel Serverless Function.
+This build is consolidated for the Vercel Hobby function limit.
 
-## Function layout
+- Only one top-level API function exists: `api/[...path].js`.
+- All route handlers live under `lib/api/**` and are dispatched by the catch-all.
+- The old duplicate `server/api/**` tree is intentionally removed.
+- Do not add route files under the top-level `api/` folder.
+- In Vercel Project Settings → Functions, select exactly one Function Region on Hobby.
+- After changing environment variables, redeploy with a fresh deployment.
 
-- `api/[...path].js` is the **only** file under the top-level `api/` directory.
-- All application/server handlers are stored under `lib/api/`, outside Vercel's file-based Function discovery directory.
-- The catch-all function dispatches `/api/...` requests to the corresponding handler in `lib/api/`.
-
-This avoids creating one Vercel Function per backend handler on the Hobby plan.
-
-## Environment variables (Production)
-
-Set these in Vercel Production:
-
+Required server env vars:
 - `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY` (preferred; the new `sb_secret_...` server key)
+- `SUPABASE_SECRET_KEY` (new `sb_secret_...` key) or legacy `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
-
-`SUPABASE_SERVICE_ROLE_KEY` remains supported as a legacy fallback, but do not put either secret in frontend/Vite variables.
-
-After changing environment variables, create a fresh Production deployment.
-
-## Expected deployment result
-
-The Vercel deployment should discover only:
-
-```text
-api/[...path].js
-```
-
-Do not add individual `.js` handlers under the top-level `api/` directory.

@@ -1,15 +1,19 @@
-export function printLoanDetail(loan, loanReceipts = []){
+export function printLoanDetail(loan, loanReceipts = [], ledgerExtras = {}){
   const esc=(v)=>String(v??'—').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
   const moneyPlain=(v)=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const moneyRs=(v)=>`₹${moneyPlain(v)}`;
   const fmtDate=(v)=>v?String(v).slice(0,10):'—';
   const totalLoan=Number(loan.loan_amount_requested||0);
   const paid=loanReceipts.reduce((n,r)=>n+Number(r.amount||0),0);
+  const expenses=(ledgerExtras.expenses||[]).map(r=>({date:fmtDate(r.expense_date||r.created_at),receipt:'EXP',details:`EXPENSE · ${r.expense_master?.expense_name||'Expense'}${r.remarks?` · ${r.remarks}`:''}`,debit:Number(r.amount||0),credit:null,sort:new Date(r.expense_date||r.created_at||0).getTime()}));
+  const charges=(ledgerExtras.charges||[]).map(r=>({date:fmtDate(r.charge_date||r.created_at),receipt:'NOC',details:`NOC CHARGES · ${r.charge_name||'NOC Charges'}${r.remarks?` · ${r.remarks}`:''}`,debit:Number(r.amount||0),credit:null,sort:new Date(r.charge_date||r.created_at||0).getTime()}));
+  const receipts=(loanReceipts||[]).map(r=>({date:fmtDate(r.receipt_date||r.created_at),receipt:r.receipt_no||'—',details:`${String(r.payment_mode||'').toUpperCase()}${r.reference_no?` · ${r.reference_no}`:''}${r.remarks?` · ${r.remarks}`:''}`,debit:null,credit:Number(r.amount||0),sort:new Date(r.receipt_date||r.created_at||0).getTime()}));
   let balance=totalLoan;
-  const ledger=[
-    {date:fmtDate(loan.approved_at||loan.created_at),receipt:'—',details:'LOAN SANCTIONED',debit:totalLoan,credit:null,balance:totalLoan},
-    ...loanReceipts.map(r=>{ balance=Math.max(0,balance-Number(r.amount||0)); return {date:fmtDate(r.receipt_date||r.created_at),receipt:r.receipt_no||'—',details:`${String(r.payment_mode||'').toUpperCase()}${r.reference_no?` · ${r.reference_no}`:''}${r.remarks?` · ${r.remarks}`:''}`,debit:null,credit:Number(r.amount||0),balance}; })
-  ];
+  const ledger=[{date:fmtDate(loan.approved_at||loan.created_at),receipt:'—',details:'LOAN SANCTIONED',debit:totalLoan,credit:null,balance:totalLoan,sort:new Date(loan.approved_at||loan.created_at||0).getTime()},...expenses,...charges,...receipts].sort((a,b)=>a.sort-b.sort);
+  ledger.forEach(r=>{balance=balance+Number(r.debit||0)-Number(r.credit||0);r.balance=Math.max(0,balance);});
+  const totalExpenses=expenses.reduce((n,r)=>n+Number(r.debit||0),0);
+  const totalCharges=charges.reduce((n,r)=>n+Number(r.debit||0),0);
+  const totalPayable=totalLoan+totalExpenses+totalCharges;
   const guarantors=loan.guarantors||[];
   const g1=guarantors[0]||{};
   const g2=guarantors[1]||{};
@@ -52,7 +56,7 @@ export function printLoanDetail(loan, loanReceipts = []){
   </div></div></div></section>
   <section class="vehicle"><div class="metric"><small>REGISTRATION DATE</small><strong>${esc(fmtDate(loan.vehicle_registration_date||loan.disbursement_date||loan.created_at))}</strong></div><div class="metric"><small>VEHICLE NO.</small><strong>${esc(loan.vehicle_no||'—')}</strong></div><div class="metric"><small>CASE / LEDGER NO.</small><strong>${esc(loan.ledger_no||'—')}</strong></div><div class="metric"><small>PAID AMOUNT</small><strong>${moneyRs(paid)}</strong></div></section><section class="vehicle"><div class="metric"><small>FI ASSIGNED</small><strong>${esc(fmtDate(loan.fi_send_date))}</strong></div><div class="metric"><small>FI APPROVED / RECEIVED</small><strong>${esc(fmtDate(loan.fi_received_date))}</strong></div><div class="metric"><small>FIELD EXECUTIVE</small><strong>${esc(loan.fi_executive_name||'—')}</strong></div><div class="metric"><small>CASE RECEIVED</small><strong>${esc(fmtDate(loan.case_received_date))}</strong></div></section>
   <div class="ledger"><table><thead><tr><th>Dated</th><th>Receipt No</th><th>Details</th><th>Debit (₹)</th><th>Credit (₹)</th><th>Balance (₹)</th><th>Case</th></tr></thead><tbody>${ledger.map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.receipt)}</td><td>${esc(r.details)}</td><td>${r.debit==null?'—':moneyPlain(r.debit)}</td><td>${r.credit==null?'—':moneyPlain(r.credit)}</td><td>${moneyPlain(r.balance)}</td><td>${esc(loan.case_status||'active')}</td></tr>`).join('')}</tbody></table></div>
-  <section class="summary"><div class="sum primary"><div class="label">TOTAL AMOUNT PAYABLE</div><div class="amount">${moneyRs(totalLoan)}</div></div><div class="sum"><div class="label">AMOUNT PAID TILL DATE</div><div class="amount">${moneyRs(paid)}</div></div><div class="sum"><div class="label">OVERDUE CHARGE</div><div class="amount">₹0.00</div></div><div class="sum"><div class="label">VISIT+CHQR+LEGAL CHARGES</div><div class="amount">₹0.00</div></div><div class="sum primary"><div class="label">TOTAL BALANCE</div><div class="amount">${moneyRs(Math.max(0,totalLoan-paid))}</div></div></section>
+  <section class="summary"><div class="sum primary"><div class="label">TOTAL AMOUNT PAYABLE</div><div class="amount">${moneyRs(totalPayable)}</div></div><div class="sum"><div class="label">AMOUNT PAID TILL DATE</div><div class="amount">${moneyRs(paid)}</div></div><div class="sum"><div class="label">NOC CHARGES</div><div class="amount">${moneyRs(totalCharges)}</div></div><div class="sum"><div class="label">LOAN EXPENSES</div><div class="amount">${moneyRs(totalExpenses)}</div></div><div class="sum primary"><div class="label">TOTAL BALANCE</div><div class="amount">${moneyRs(Math.max(0,totalPayable-paid))}</div></div></section>
   <div class="footer"><span>CAPITAL HIND FINANCE PRIVATE LIMITED</span><span>LP No: ${esc(loan.loan_account_no||loan.application_no)}</span></div>
   </div><script>window.onload=()=>{window.focus();window.print();}</script></body></html>`;
   const w=window.open('','_blank','width=1100,height=850');

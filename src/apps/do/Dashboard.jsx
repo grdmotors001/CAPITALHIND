@@ -1,4 +1,5 @@
 import ProfileMenu from '../../components/ProfileMenu';
+import RoleNavigation from '../../components/RoleNavigation';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -59,7 +60,7 @@ export default function DODashboard() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell"><RoleNavigation role="do" />
       <header className="app-header">
         <span>Disbursement Officer{user?.name ? ` — ${user.name}` : ''}</span>
         <ProfileMenu compact />

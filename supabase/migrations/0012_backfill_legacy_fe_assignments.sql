@@ -2,22 +2,21 @@
 -- Older Excel data stored only fi_executive_name; collection permissions use
 -- assigned_fe_id. Only exact case-insensitive name matches with one unique
 -- active Field Executive are linked automatically.
+--
+-- Important: PostgreSQL has no min(uuid)/max(uuid) aggregate. We use
+-- array_agg(... ORDER BY ...) and take the only row after HAVING count(*) = 1.
 
 WITH unique_fe AS (
   SELECT
     lower(trim(full_name)) AS name_key,
-    id
+    (array_agg(id ORDER BY id))[1] AS id
   FROM users
   WHERE role = 'field_executive'
     AND is_active = true
-    AND lower(trim(full_name)) IN (
-      SELECT lower(trim(full_name))
-      FROM users
-      WHERE role = 'field_executive'
-        AND is_active = true
-      GROUP BY lower(trim(full_name))
-      HAVING count(*) = 1
-    )
+    AND full_name IS NOT NULL
+    AND trim(full_name) <> ''
+  GROUP BY lower(trim(full_name))
+  HAVING count(*) = 1
 )
 UPDATE loan_applications AS la
 SET

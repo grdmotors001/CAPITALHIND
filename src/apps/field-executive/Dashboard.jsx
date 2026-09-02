@@ -1,4 +1,5 @@
 import ProfileMenu from '../../components/ProfileMenu';
+import RoleNavigation from '../../components/RoleNavigation';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listAssignedVisits, submitFieldInvestigation, collectCash, getCollectionHistory, getRepoOptions, recordRepo } from './api';
@@ -35,7 +36,7 @@ export default function FieldExecutiveDashboard(){
  function updateRepo(k,v){setRepoForm(f=>({...f,[k]:v}))}
  async function handleRepo(e){e.preventDefault();if(!repoLoan)return;setRepoSaving(true);setError('');setMessage('');try{const d=await recordRepo({loan_application_id:repoLoan.id,...repoForm,battery_master_id:repoForm.battery_available?Number(repoForm.battery_master_id):null,parked_dealer_id:Number(repoForm.parked_dealer_id)});setMessage(d.message||'Vehicle Repo recorded successfully.');setRepoOpen(false);setRepoLoan(null);await Promise.all([load(),loadRepoOptions()])}catch(e){setError(e.message)}finally{setRepoSaving(false)}}
  const statuses=new Set(['approved','sanctioned','disbursed']), candidates=applications.filter(a=>statuses.has(a.application_status)&&a.case_status!=='vehicle_seized'),term=collectionSearch.trim().toLowerCase(),matches=candidates.filter(a=>!term||[a.customer_name,a.customer_phone,a.vehicle_no,a.application_no,a.loan_account_no].filter(Boolean).some(v=>String(v).toLowerCase().includes(term))),repoTerm=repoSearch.trim().toLowerCase(),repoCandidates=candidates.filter(a=>!repoTerm||[a.customer_name,a.customer_phone,a.vehicle_no,a.application_no,a.loan_account_no].filter(Boolean).some(v=>String(v).toLowerCase().includes(repoTerm)));
- return <div className="app-shell fe-shell">
+ return <div className="app-shell fe-shell"><RoleNavigation role="field_executive" />
   <header className="app-header fe-header"><span>Field Executive App{user?.name?` — ${user.name}`:''}</span><div className="fe-header-actions"><button type="button" className="admin-btn small fe-collect-top" onClick={openCollection}>💰 Collect EMI's</button><div className="fe-profile-menu"><ProfileMenu compact/></div><button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button></div></header>
   <main className="app-body fe-body" id="fe-home">
    {message&&<div className="admin-alert success">✓ {message}</div>}{error&&<div className="admin-alert error">⚠ {error}</div>}

@@ -1,13 +1,26 @@
-// WIREFRAME — Expense Management
-// Real scope: expense categories, entry with approval workflow, attachments.
+import { useEffect, useMemo, useState } from 'react';
 
-export default function ExpenseManagement() {
-  return (
-    <div className="page-wireframe">
-      <h2>Expense Management</h2>
-      <section className="wireframe-block">Expense categories (rent, salary, utilities, yard charges, etc.)</section>
-      <section className="wireframe-block">New Expense Entry (form + attachment)</section>
-      <section className="wireframe-block">Expense approval queue</section>
-    </div>
-  );
+const token=()=>localStorage.getItem('chfpl_admin_token')||'';
+async function api(path,opts={}){const r=await fetch(path,{method:opts.method||'GET',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token()}`},body:opts.body?JSON.stringify(opts.body):undefined});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success)throw new Error(d.error||'Request failed');return d;}
+const money=v=>`₹${Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const today=()=>new Date().toISOString().slice(0,10);
+
+export default function ExpenseManagement(){
+ const [masters,setMasters]=useState([]),[loans,setLoans]=useState([]),[expenses,setExpenses]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [masterName,setMasterName]=useState('');
+ const [form,setForm]=useState({loan_application_id:'',expense_master_id:'',amount:'',date:today(),remarks:''});
+ async function load(){setLoading(true);setError('');try{const [m,l,e]=await Promise.all([api('/api/admin/expense-master'),api('/api/admin/loan-cases'),api('/api/admin/loan-ledger')]);setMasters(m.items||[]);setLoans(l.loans||[]);setExpenses(e.expenses||[]);}catch(e){setError(e.message)}finally{setLoading(false)}}
+ useEffect(()=>{load()},[]);
+ const activeMasters=useMemo(()=>masters.filter(x=>x.is_active),[masters]);
+ async function addMaster(e){e.preventDefault();setSaving(true);setError('');setMessage('');try{const d=await api('/api/admin/expense-master',{method:'POST',body:{expense_name:masterName}});setMessage(d.message);setMasterName('');await load()}catch(e){setError(e.message)}finally{setSaving(false)}}
+ async function addExpense(e){e.preventDefault();setSaving(true);setError('');setMessage('');try{const d=await api('/api/admin/loan-ledger',{method:'POST',body:{entry_type:'expense',loan_application_id:Number(form.loan_application_id),expense_master_id:Number(form.expense_master_id),amount:Number(form.amount),date:form.date,remarks:form.remarks}});setMessage(d.message);setForm({loan_application_id:'',expense_master_id:'',amount:'',date:today(),remarks:''});await load()}catch(e){setError(e.message)}finally{setSaving(false)}}
+ return <div className="accounting-page">
+  <div className="accounting-page-head"><div><div className="admin-eyebrow">ACCOUNTING / LEDGER</div><h1>Expense Management</h1><p>Loan-wise expense entries are posted as debit lines in the printed ledger.</p></div></div>
+  {error&&<div className="admin-alert error">⚠ {error}</div>}{message&&<div className="admin-alert success">✓ {message}</div>}
+  <div className="accounting-expense-grid">
+   <section className="admin-card"><div className="admin-card-title"><div><h2>Expense Master</h2><span>Categories available for loan expenses</span></div></div><form className="staff-form" onSubmit={addMaster}><div className="form-grid"><div className="full"><label>New Expense Name</label><input value={masterName} onChange={e=>setMasterName(e.target.value)} placeholder="e.g. Recovery Travel" required/></div></div><button className="admin-btn" disabled={saving}>{saving?'Saving…':'+ Add Expense Master'}</button></form><div className="master-chips">{masters.map(m=><span key={m.id} className={m.is_active?'active':''}>{m.expense_name}</span>)}</div></section>
+   <section className="admin-card"><div className="admin-card-title"><div><h2>Add Loan Expense</h2><span>Expense will appear in the loan ledger and print</span></div></div><form className="staff-form" onSubmit={addExpense}><div className="form-grid"><div className="full"><label>Loan / Applicant</label><select value={form.loan_application_id} onChange={e=>setForm({...form,loan_application_id:e.target.value})} required><option value="">Select loan</option>{loans.map(l=><option key={l.id} value={l.id}>{l.loan_account_no||l.application_no} · {l.customer_profiles?.full_name||'Applicant'} · {l.vehicle_no||'No vehicle'}</option>)}</select></div><div><label>Expense Master</label><select value={form.expense_master_id} onChange={e=>setForm({...form,expense_master_id:e.target.value})} required><option value="">Select expense</option>{activeMasters.map(m=><option key={m.id} value={m.id}>{m.expense_name}</option>)}</select></div><div><label>Amount</label><input type="number" min="0.01" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} required/></div><div><label>Expense Date</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} required/></div><div className="full"><label>Remarks</label><textarea rows="3" value={form.remarks} onChange={e=>setForm({...form,remarks:e.target.value})} placeholder="Optional details"/></div></div><button className="admin-btn" disabled={saving||loading}>{saving?'Saving…':'✓ Add Expense to Ledger'}</button></form></section>
+  </div>
+  <section className="admin-card staff-list-card"><div className="admin-card-title"><div><h2>Recent Loan Expenses</h2><span>{expenses.length} entries loaded</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Loan</th><th>Applicant</th><th>Expense</th><th>Amount</th><th>Remarks</th></tr></thead><tbody>{loading?<tr><td colSpan="6" className="empty-cell">Loading…</td></tr>:expenses.length?expenses.map(x=><tr key={x.id}><td>{x.expense_date}</td><td><strong>{x.loan?.loan_account_no||x.loan?.application_no||'—'}</strong></td><td>{x.loan?.customer_profiles?.full_name||'—'}</td><td>{x.expense_master?.expense_name||'Expense'}</td><td><strong>{money(x.amount)}</strong></td><td>{x.remarks||'—'}</td></tr>):<tr><td colSpan="6" className="empty-cell">No loan expenses recorded.</td></tr>}</tbody></table></div></section>
+ </div>;
 }

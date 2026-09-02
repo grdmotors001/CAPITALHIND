@@ -1,4 +1,5 @@
 import ProfileMenu from '../../components/ProfileMenu';
+import RoleNavigation from '../../components/RoleNavigation';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -71,7 +72,7 @@ export default function DealerDashboard() {
   }, [applications]);
 
   return (
-    <div className="dealer-shell">
+    <div className="dealer-shell"><RoleNavigation role="dealer" />
       <header className="dealer-header">
         <div>
           <div className="dealer-brand">Capital Hind Finance</div>
