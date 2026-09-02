@@ -2,6 +2,8 @@
 // Original handlers are kept under server/api with their URL paths preserved.
 
 const routes = {
+  '/admin/applicants': route_admin_applicants,
+  '/admin/repo-cases': route_admin_repo_cases,
   '/admin/add-receipt': route_admin_add_receipt,
   '/admin/assign-fe': route_admin_assign_fe,
   '/admin/create-loan': route_admin_create_loan,
@@ -73,6 +75,8 @@ const routes = {
   '/staff/login': route_staff_login,
 };
 
+import route_admin_applicants from '../lib/api/admin/applicants.js';
+import route_admin_repo_cases from '../lib/api/admin/repo-cases.js';
 import route_admin_add_receipt from '../lib/api/admin/add-receipt.js';
 import route_admin_assign_fe from '../lib/api/admin/assign-fe.js';
 import route_admin_create_loan from '../lib/api/admin/create-loan.js';

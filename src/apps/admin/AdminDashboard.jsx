@@ -16,6 +16,8 @@ import ManageBatteries from './masters/ManageBatteries';
 import Receipts from './Receipts';
 import PaymentVouchers from './PaymentVouchers';
 import LoanCases from './LoanCases';
+import Applicants from './Applicants';
+import RepoCases from './RepoCases';
 
 export default function AdminDashboard() {
   const location = useLocation();
@@ -40,7 +42,9 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/create-loan') ? 'active' : ''} to="/app/admin/create-loan">▣ <span>Create Loan</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/payment-vouchers') ? 'active' : ''} to="/app/admin/payment-vouchers">₹ <span>Payment Vouchers</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/receipts') ? 'active' : ''} to="/app/admin/receipts">▤ <span>Receipts</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/applicants') ? 'active' : ''} to="/app/admin/applicants">◉ <span>Applicants</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/loan-cases') ? 'active' : ''} to="/app/admin/loan-cases">▤ <span>Loan Cases</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/repo-cases') ? 'active' : ''} to="/app/admin/repo-cases">🚗 <span>Repo</span></Link>
           <div className="nav-section-label"><span>Masters</span></div>
           <Link className={location.pathname.startsWith('/app/admin/masters/oem') ? 'active' : ''} to="/app/admin/masters/oem">🏭 <span>OEM</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/hp') ? 'active' : ''} to="/app/admin/masters/hp">⚖ <span>HP (Hypothecation)</span></Link>
@@ -60,7 +64,9 @@ export default function AdminDashboard() {
           <Route path="create-loan" element={<CreateLoan />} />
           <Route path="payment-vouchers" element={<PaymentVouchers />} />
           <Route path="receipts" element={<Receipts />} />
+          <Route path="applicants" element={<Applicants />} />
           <Route path="loan-cases" element={<LoanCases />} />
+          <Route path="repo-cases" element={<RepoCases />} />
           <Route path="masters" element={<MastersHome />} />
           <Route path="masters/oem" element={<ManageOEM />} />
           <Route path="masters/hp" element={<ManageHP />} />
