@@ -38,7 +38,20 @@ import route_staff_list_35 from '../lib/api/admin/staff/list.js';
 import route_staff_update_36 from '../lib/api/admin/staff/update.js';
 import route_update_user_37 from '../lib/api/admin/update-user.js';
 
+import route_applicants_38 from '../lib/api/admin/applicants.js';
+import route_expense_master_39 from '../lib/api/admin/expense-master.js';
+import route_loan_ledger_40 from '../lib/api/admin/loan-ledger.js';
+import route_repo_cases_41 from '../lib/api/admin/repo-cases.js';
+import route_reports_42 from '../lib/api/admin/reports.js';
+import route_masters_batteries_43 from '../lib/api/admin/masters/batteries.js';
+
 const routes = {
+  '/applicants': route_applicants_38,
+  '/expense-master': route_expense_master_39,
+  '/loan-ledger': route_loan_ledger_40,
+  '/repo-cases': route_repo_cases_41,
+  '/reports': route_reports_42,
+  '/masters/batteries': route_masters_batteries_43,
   '/add-receipt': route_add_receipt_0,
   '/assign-fe': route_assign_fe_1,
   '/create-loan': route_create_loan_2,

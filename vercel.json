@@ -1,10 +1,68 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin?path=:path*"
+    },
+    {
+      "source": "/api/collection/:path*",
+      "destination": "/api/collection?path=:path*"
+    },
+    {
+      "source": "/api/customer/:path*",
+      "destination": "/api/customer?path=:path*"
+    },
+    {
+      "source": "/api/dealer/:path*",
+      "destination": "/api/dealer?path=:path*"
+    },
+    {
+      "source": "/api/do/:path*",
+      "destination": "/api/do?path=:path*"
+    },
+    {
+      "source": "/api/field-executive/:path*",
+      "destination": "/api/field-executive?path=:path*"
+    },
+    {
+      "source": "/api/team-leader/:path*",
+      "destination": "/api/team-leader?path=:path*"
+    },
+    {
+      "source": "/api/tele-caller/:path*",
+      "destination": "/api/tele-caller?path=:path*"
+    },
+    {
+      "source": "/api/users/:path*",
+      "destination": "/api/users?path=:path*"
+    },
+    {
+      "source": "/admin/react-login.php",
+      "destination": "/api/admin?path=login"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
-    { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] },
-    { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-store, max-age=0" }] }
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
   ]
 }
