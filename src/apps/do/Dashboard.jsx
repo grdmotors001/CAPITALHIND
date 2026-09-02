@@ -1,3 +1,4 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -61,6 +62,7 @@ export default function DODashboard() {
     <div className="app-shell">
       <header className="app-header">
         <span>Disbursement Officer{user?.name ? ` — ${user.name}` : ''}</span>
+        <ProfileMenu compact />
         <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
       </header>
       <main className="app-body">

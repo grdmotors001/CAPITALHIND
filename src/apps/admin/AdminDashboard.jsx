@@ -1,3 +1,4 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -46,6 +47,7 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/masters/loan-types') ? 'active' : ''} to="/app/admin/masters/loan-types">₹ <span>Loan Type</span></Link>
           <Link to="/app/accounting">▦ <span>Accounting</span></Link>
         </nav>
+        <div style={{ padding: '12px 16px' }}><ProfileMenu compact /></div>
         <button className="admin-logout" onClick={logout}>↪ Logout</button>
       </aside>
       <main className="admin-main">

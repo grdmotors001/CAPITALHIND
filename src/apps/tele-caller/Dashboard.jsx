@@ -1,3 +1,4 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -48,7 +49,7 @@ export default function TeleCallerDashboard() {
   }
 
   return <div className="tele-shell">
-    <header className="tele-header"><div><div className="tele-brand">Capital Hind Finance</div><div className="tele-sub">Tele Caller Portal</div></div><div className="tele-header-right"><span>{user.full_name || 'Tele Caller'}</span><button onClick={logout}>↪ Logout</button></div></header>
+    <header className="tele-header"><div><div className="tele-brand">Capital Hind Finance</div><div className="tele-sub">Tele Caller Portal</div></div><div className="tele-header-right"><span>{user.full_name || 'Tele Caller'}</span><ProfileMenu compact /> <button onClick={logout}>↪ Logout</button></div></header>
     <main className="tele-main">
       <div className="tele-page-head"><div><div className="tele-eyebrow">CALLING DASHBOARD</div><h1>Good to see you, {user.full_name || 'Tele Caller'}</h1><p>All loan cases par calling aur follow-up manage karein. Field Executive ka assigned data yahan include nahi hota.</p></div><button className="tele-refresh" onClick={load} disabled={loading}>↻ Refresh</button></div>
       {error && <div className="tele-error">⚠ {error}</div>}

@@ -1,3 +1,4 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +40,7 @@ export default function TeamLeaderDashboard() {
   }
 
   return <div className="team-shell">
-    <header className="team-header"><div><div className="team-brand">Capital Hind Finance</div><div className="team-sub">Team Leader Portal</div></div><div className="team-header-right"><span>{user.full_name || 'Team Leader'}</span><button onClick={logout}>↪ Logout</button></div></header>
+    <header className="team-header"><div><div className="team-brand">Capital Hind Finance</div><div className="team-sub">Team Leader Portal</div></div><div className="team-header-right"><span>{user.full_name || 'Team Leader'}</span><ProfileMenu compact /> <button onClick={logout}>↪ Logout</button></div></header>
     <main className="team-main">
       <div className="team-page-head"><div><div className="team-eyebrow">TELE CALLING MANAGEMENT</div><h1>Team Leader Dashboard</h1><p>Physical register / ledger ko Tele Caller ke saath assign aur manage karein.</p></div><button className="team-refresh" onClick={load} disabled={loading}>↻ Refresh</button></div>
       {error && <div className="team-error">⚠ {error}</div>}{message && <div className="team-success">✓ {message}</div>}

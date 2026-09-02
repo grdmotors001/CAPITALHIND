@@ -1,3 +1,4 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listAssignedVisits, submitFieldInvestigation, collectCash } from './api';
@@ -165,6 +166,7 @@ export default function FieldExecutiveDashboard() {
         <span>Field Executive App{user?.name ? ` — ${user.name}` : ''}</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button type="button" className="admin-btn small" onClick={openCollection}>💰 Collect EMI's</button>
+          <ProfileMenu compact />
           <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
         </div>
       </header>

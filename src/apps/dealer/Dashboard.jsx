@@ -1,7 +1,8 @@
+import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearDealerToken, fetchLoanApplications, fetchDealerProfile, updateDealerProfile } from './api';
+import { clearDealerToken, fetchLoanApplications, fetchDealerProfile } from './api';
 import { clearCurrentUser, getCurrentUser, setCurrentUser } from '../../utils/session';
 
 const STATUS_META = {
@@ -29,9 +30,6 @@ export default function DealerDashboard() {
   const [applications, setApplications] = useState([]);
   const [profile, setProfile] = useState(getCurrentUser() || {});
   const [loading, setLoading] = useState(true);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [name, setName] = useState(profile.full_name || '');
-  const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState('');
 
   function logout() {
@@ -47,7 +45,6 @@ export default function DealerDashboard() {
         if (!alive) return;
         setApplications(apps || []);
         setProfile(dealerProfile || {});
-        setName(dealerProfile?.full_name || '');
         setCurrentUser({ ...(getCurrentUser() || {}), ...(dealerProfile || {}), role: 'dealer' });
       })
       .catch((e) => alive && setError(e.message || 'Could not load dashboard'))
@@ -73,22 +70,6 @@ export default function DealerDashboard() {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [applications]);
 
-  async function saveProfile(e) {
-    e.preventDefault();
-    setSavingProfile(true);
-    setError('');
-    try {
-      const updated = await updateDealerProfile({ full_name: name });
-      setProfile(updated);
-      setCurrentUser({ ...(getCurrentUser() || {}), ...updated, role: 'dealer' });
-      setProfileOpen(false);
-    } catch (e) {
-      setError(e.message || 'Could not update profile');
-    } finally {
-      setSavingProfile(false);
-    }
-  }
-
   return (
     <div className="dealer-shell">
       <header className="dealer-header">
@@ -97,10 +78,7 @@ export default function DealerDashboard() {
           <div className="dealer-header-sub">Dealer Portal</div>
         </div>
         <div className="dealer-header-actions">
-          <button type="button" className="dealer-profile-button" onClick={() => setProfileOpen(true)}>
-            <span className="dealer-avatar">{(profile.full_name || 'D').charAt(0).toUpperCase()}</span>
-            <span>{profile.full_name || 'Dealer'}</span>
-          </button>
+          <ProfileMenu compact onUpdated={(next) => setProfile(next || {})} />
           <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
         </div>
       </header>
@@ -141,7 +119,7 @@ export default function DealerDashboard() {
             <div className="dealer-card-head"><div><h2>Quick actions</h2><p>Common dealer tasks.</p></div></div>
             <div className="dealer-actions">
               <Link to="/app/dealer/new-application" className="dealer-action"><b>＋</b><span><strong>New application</strong><small>Submit a fresh customer loan application</small></span></Link>
-              <button type="button" className="dealer-action" onClick={() => setProfileOpen(true)}><b>◉</b><span><strong>My profile</strong><small>Update your dealer display name</small></span></button>
+              <div className="dealer-action"><b>◉</b><span><strong>My profile</strong><small>Use the Profile button in the header to update all details</small></span></div>
             </div>
           </div>
         </section>
@@ -160,7 +138,6 @@ export default function DealerDashboard() {
       <CollectionActivity compact />
     </main>
 
-      {profileOpen && <div className="dealer-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setProfileOpen(false)}><form className="dealer-modal" onSubmit={saveProfile}><div className="dealer-modal-head"><div><h2>My profile</h2><p>Update the information shown in your dealer portal.</p></div><button type="button" onClick={() => setProfileOpen(false)}>×</button></div><label>Full name<input value={name} onChange={e => setName(e.target.value)} maxLength="100" required /></label><label>Phone<input value={profile.phone || ''} readOnly className="readonly-input" /></label><label>Dealer ID<input value={profile.dealer_id || ''} readOnly className="readonly-input" /></label><div className="dealer-modal-note">Phone and dealer ID are kept read-only because they are linked to your login/account.</div><div className="dealer-modal-actions"><button type="button" className="secondary-button" onClick={() => setProfileOpen(false)}>Cancel</button><button type="submit" className="dealer-primary" disabled={savingProfile}>{savingProfile ? 'Saving…' : 'Save changes'}</button></div></form></div>}
     </div>
   );
 }

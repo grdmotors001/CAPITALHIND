@@ -62,6 +62,7 @@ const routes = {
   '/tele-caller/dashboard': route_tele_caller_dashboard,
   '/tele-caller/log-call': route_tele_caller_log_call,
   '/users/login': route_users_login,
+  '/users/profile': route_users_profile,
 };
 
 import route_admin_add_receipt from '../lib/api/admin/add-receipt.js';
@@ -124,6 +125,7 @@ import route_team_leader_unassign_register from '../lib/api/team-leader/unassign
 import route_tele_caller_dashboard from '../lib/api/tele-caller/dashboard.js';
 import route_tele_caller_log_call from '../lib/api/tele-caller/log-call.js';
 import route_users_login from '../lib/api/users/login.js';
+import route_users_profile from '../lib/api/users/profile.js';
 
 export default async function handler(req, res) {
   const rawPath = req.query?.path;
