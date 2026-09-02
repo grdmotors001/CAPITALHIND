@@ -1,22 +1,33 @@
-# Vercel Hobby deployment
+# Vercel Hobby Deployment
 
-This build consolidates all API handlers behind one Vercel catch-all serverless function:
+This project is intentionally structured to use **one** Vercel Serverless Function.
 
-- Vercel function: `api/[...path].js`
-- Original handlers: `server/api/**`
-- Existing API URLs remain unchanged, e.g. `/api/admin/login`, `/api/dealer/login`, `/api/customer/request-otp`.
-- `/admin/react-login.php` remains rewritten to `/api/admin/login`.
+## Function layout
 
-## Required Production environment variables
+- `api/[...path].js` is the **only** file under the top-level `api/` directory.
+- All application/server handlers are stored under `lib/api/`, outside Vercel's file-based Function discovery directory.
+- The catch-all function dispatches `/api/...` requests to the corresponding handler in `lib/api/`.
+
+This avoids creating one Vercel Function per backend handler on the Hobby plan.
+
+## Environment variables (Production)
 
 Set these in Vercel Production:
 
-- `SUPABASE_URL` = `https://ddnknnviczpnqqbegdec.supabase.co`
-- `SUPABASE_SECRET_KEY` = your Supabase `sb_secret_...` key
-- `JWT_SECRET` = your existing JWT secret
+- `SUPABASE_URL`
+- `SUPABASE_SECRET_KEY` (preferred; the new `sb_secret_...` server key)
+- `JWT_SECRET`
 
-The backend also accepts `SUPABASE_SERVICE_ROLE_KEY` as a legacy fallback.
+`SUPABASE_SERVICE_ROLE_KEY` remains supported as a legacy fallback, but do not put either secret in frontend/Vite variables.
 
-Never put the Supabase secret key in `VITE_*` variables or frontend code.
+After changing environment variables, create a fresh Production deployment.
 
-After changing Vercel environment variables, create a fresh Production deployment.
+## Expected deployment result
+
+The Vercel deployment should discover only:
+
+```text
+api/[...path].js
+```
+
+Do not add individual `.js` handlers under the top-level `api/` directory.
