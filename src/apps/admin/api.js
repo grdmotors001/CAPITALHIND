@@ -259,3 +259,24 @@ export function deleteStaff(user) {
   }
   return staffRequest('delete', { method: 'POST', body: { id: user.id } });
 }
+
+// --- Reports ---------------------------------------------------------------
+export async function listReport(filters = {}) {
+  const token = getAdminToken();
+  const qs = new URLSearchParams();
+  Object.entries(filters).forEach(([k,v]) => { if (v && v !== 'All') qs.set(k, v); });
+  const response = await fetch(`${AUTH_API_BASE}/reports?${qs.toString()}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.success) throw new Error(data.error || 'Could not load report');
+  return data;
+}
+
+export async function downloadReportCsv(filters = {}) {
+  const token = getAdminToken();
+  const qs = new URLSearchParams({ ...filters, download: 'csv' });
+  const response = await fetch(`${AUTH_API_BASE}/reports?${qs.toString()}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+  if (!response.ok) { const data = await response.json().catch(()=>({})); throw new Error(data.error || 'Report download failed'); }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download=`CHFPL_${filters.report || 'report'}_${filters.from || 'from'}_${filters.to || 'to'}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
