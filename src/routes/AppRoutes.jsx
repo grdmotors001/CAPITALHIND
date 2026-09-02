@@ -12,6 +12,8 @@ import CustomerPaymentDashboard from '../apps/customer-payment/Dashboard';
 import AdminDashboard from '../apps/admin/AdminDashboard';
 import DODashboard from '../apps/do/Dashboard';
 import TeamLeaderDashboard from '../apps/team-leader/Dashboard';
+import CashierDashboard from '../apps/cashier/Dashboard';
+import StaffDashboard from '../apps/staff/Dashboard';
 
 import AccountingLayout from '../layouts/AccountingLayout';
 import ChartOfAccounts from '../pages/accounting/ChartOfAccounts';
@@ -90,6 +92,9 @@ export default function AppRoutes() {
             </RoleGuard>
           }
         />
+
+        <Route path="/app/cashier/*" element={<RoleGuard allow={[ROLE_KEYS.CASHIER]}><CashierDashboard /></RoleGuard>} />
+        <Route path="/app/staff/*" element={<RoleGuard allow={['staff']}><StaffDashboard /></RoleGuard>} />
 
         {/* --- Disbursement Officer (DO) portal --- */}
         <Route

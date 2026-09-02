@@ -1,336 +1,42 @@
 import ProfileMenu from '../../components/ProfileMenu';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listAssignedVisits, submitFieldInvestigation, collectCash } from './api';
+import { listAssignedVisits, submitFieldInvestigation, collectCash, getCollectionHistory } from './api';
 import { clearAppUserToken } from '../../utils/appUserAuth';
 import { clearCurrentUser, getCurrentUser } from '../../utils/session';
 
-const emptyFiForm = {
-  visit_date: new Date().toISOString().slice(0, 10),
-  residence_type: 'own',
-  mobile_no: '',
-  monthly_income: '',
-  latitude: '',
-  longitude: '',
-  remarks: '',
-  recommendation: 'positive',
-};
+const emptyFiForm={visit_date:new Date().toISOString().slice(0,10),residence_type:'own',mobile_no:'',monthly_income:'',latitude:'',longitude:'',remarks:'',recommendation:'positive'};
+const money=v=>`₹${Number(v||0).toLocaleString('en-IN')}`;
 
-export default function FieldExecutiveDashboard() {
-  const navigate = useNavigate();
-  const user = getCurrentUser();
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [activeAppId, setActiveAppId] = useState(null);
-  const [form, setForm] = useState(emptyFiForm);
-  const [saving, setSaving] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [collectionOpen, setCollectionOpen] = useState(false);
-  const [collectionSearch, setCollectionSearch] = useState('');
-  const [selectedCollectionLoan, setSelectedCollectionLoan] = useState(null);
-  const [collectingId, setCollectingId] = useState(null);
-  const [collectionAmount, setCollectionAmount] = useState('');
-  const [collectionRemarks, setCollectionRemarks] = useState('');
-
-  function logout() {
-    clearAppUserToken();
-    clearCurrentUser();
-    navigate('/login', { replace: true });
-  }
-
-  async function load() {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await listAssignedVisits();
-      setApplications(data.applications || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, []);
-
-  const pending = applications.filter((a) => a.application_status === 'fi_pending');
-  const completed = applications.filter((a) => a.application_status !== 'fi_pending');
-
-  function startFi(app) {
-    setActiveAppId(app.id);
-    setForm(emptyFiForm);
-    setMessage(''); setError('');
-  }
-
-  function updateForm(key, value) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  function useMyLocation() {
-    if (!navigator.geolocation) {
-      setError('Location is not supported on this device/browser.');
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        updateForm('latitude', pos.coords.latitude.toFixed(6));
-        updateForm('longitude', pos.coords.longitude.toFixed(6));
-        setLocating(false);
-      },
-      () => {
-        setError('Could not get GPS location. Please allow location access.');
-        setLocating(false);
-      }
-    );
-  }
-
-  async function handleSubmitFi(e) {
-    e.preventDefault();
-    setSaving(true); setError(''); setMessage('');
-    try {
-      const data = await submitFieldInvestigation({
-        loan_application_id: activeAppId,
-        ...form,
-        monthly_income: form.monthly_income ? Number(form.monthly_income) : undefined,
-        latitude: form.latitude ? Number(form.latitude) : undefined,
-        longitude: form.longitude ? Number(form.longitude) : undefined,
-      });
-      setMessage(data.message || 'Field Investigation report submitted.');
-      setActiveAppId(null);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function openCollection() {
-    setCollectionOpen(true);
-    setCollectionSearch('');
-    setSelectedCollectionLoan(null);
-    setCollectionAmount('');
-    setCollectionRemarks('');
-    setError(''); setMessage('');
-  }
-
-  function selectCollectionLoan(app) {
-    setSelectedCollectionLoan(app);
-    setCollectionAmount(app.emi_amount ? String(app.emi_amount) : '');
-    setCollectionRemarks('');
-    setError('');
-  }
-
-  async function handleCollectCash(app) {
-    const amount = Number(collectionAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setError('Enter a valid cash collection amount.');
-      return;
-    }
-    setCollectingId(app.id); setError(''); setMessage('');
-    try {
-      const data = await collectCash({
-        loan_application_id: app.id,
-        amount,
-        remarks: collectionRemarks,
-      });
-      setMessage(data.message || 'EMI cash collection recorded.');
-      setCollectionAmount(''); setCollectionRemarks('');
-      setSelectedCollectionLoan(null);
-      setCollectionSearch('');
-      setCollectionOpen(false);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCollectingId(null);
-    }
-  }
-
-  const collectableStatuses = new Set(['approved', 'sanctioned', 'disbursed']);
-  const collectionCandidates = applications.filter((app) => collectableStatuses.has(app.application_status));
-  const searchTerm = collectionSearch.trim().toLowerCase();
-  const collectionMatches = collectionCandidates.filter((app) => {
-    if (!searchTerm) return true;
-    return [app.customer_name, app.customer_phone, app.vehicle_no, app.application_no, app.loan_account_no]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(searchTerm));
-  });
-
-  return (
-    <div className="app-shell">
-      <header className="app-header">
-        <span>Field Executive App{user?.name ? ` — ${user.name}` : ''}</span>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button type="button" className="admin-btn small" onClick={openCollection}>💰 Collect EMI's</button>
-          <ProfileMenu compact />
-          <button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button>
-        </div>
-      </header>
-      <main className="app-body">
-        {message && <div className="admin-alert success">✓ {message}</div>}
-        {error && <div className="admin-alert error">⚠ {error}</div>}
-
-        <section className="admin-card staff-list-card">
-          <div className="admin-card-title">
-            <div><h2>Today's Assigned Visits</h2><span>Pending Field Investigation</span></div>
-            <button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button>
-          </div>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Application</th><th>Customer</th><th>Address</th><th>Vehicle</th><th>Action</th></tr></thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan="5" className="empty-cell">Loading…</td></tr>
-                ) : pending.length === 0 ? (
-                  <tr><td colSpan="5" className="empty-cell">No visits assigned right now.</td></tr>
-                ) : pending.map((app) => (
-                  <tr key={app.id}>
-                    <td><strong>{app.application_no}</strong></td>
-                    <td className="contact-text"><div>{app.customer_name}</div><div className="muted">{app.customer_phone}</div></td>
-                    <td>{app.customer_address || '—'}{app.customer_city ? `, ${app.customer_city}` : ''}</td>
-                    <td>{app.vehicle_model || '—'}</td>
-                    <td className="actions-cell">
-                      <button className="admin-btn small" onClick={() => startFi(app)}>
-                        {activeAppId === app.id ? 'Editing…' : 'Start FI'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {activeAppId && (
-            <form className="staff-form" onSubmit={handleSubmitFi}>
-              <div className="admin-card-title" style={{ padding: '0 0 14px' }}>
-                <div><h2>Field Investigation Report</h2><span>Application #{pending.find((a) => a.id === activeAppId)?.application_no}</span></div>
-              </div>
-              <div className="form-grid">
-                <div><label>Visit date</label><input type="date" value={form.visit_date} onChange={(e) => updateForm('visit_date', e.target.value)} required /></div>
-                <div>
-                  <label>Residence type</label>
-                  <select value={form.residence_type} onChange={(e) => updateForm('residence_type', e.target.value)}>
-                    <option value="own">Own house</option>
-                    <option value="rented">Rented house</option>
-                  </select>
-                </div>
-                <div><label>Mobile no.</label><input value={form.mobile_no} onChange={(e) => updateForm('mobile_no', e.target.value)} maxLength="15" placeholder="98xxxxxxxx" /></div>
-                <div><label>Monthly income</label><input type="number" min="0" value={form.monthly_income} onChange={(e) => updateForm('monthly_income', e.target.value)} placeholder="₹" /></div>
-                <div>
-                  <label>GPS location</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input value={form.latitude} onChange={(e) => updateForm('latitude', e.target.value)} placeholder="Latitude" />
-                    <input value={form.longitude} onChange={(e) => updateForm('longitude', e.target.value)} placeholder="Longitude" />
-                  </div>
-                  <button type="button" className="admin-btn small secondary" style={{ marginTop: 8 }} onClick={useMyLocation} disabled={locating}>
-                    {locating ? 'Locating…' : '📍 Use my current location'}
-                  </button>
-                </div>
-                <div>
-                  <label>Recommendation</label>
-                  <select value={form.recommendation} onChange={(e) => updateForm('recommendation', e.target.value)}>
-                    <option value="positive">Positive</option>
-                    <option value="negative">Negative</option>
-                  </select>
-                </div>
-                <div className="full"><label>Remarks</label><input value={form.remarks} onChange={(e) => updateForm('remarks', e.target.value)} placeholder="Neighbour confirmation, notes, etc." /></div>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="admin-btn" disabled={saving}>{saving ? 'Submitting…' : 'Submit FI Report'}</button>
-                <button type="button" className="admin-btn secondary" onClick={() => setActiveAppId(null)}>Cancel</button>
-              </div>
-            </form>
-          )}
-        </section>
-
-        <section className="admin-card staff-list-card">
-          <div className="admin-card-title"><div><h2>Completed</h2><span>FI already submitted</span></div></div>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead><tr><th>Application</th><th>Customer</th><th>Result</th><th>Status</th><th>Cash Collection</th></tr></thead>
-              <tbody>
-                {completed.length === 0 ? (
-                  <tr><td colSpan="5" className="empty-cell">No completed visits yet.</td></tr>
-                ) : completed.map((app) => (
-                  <tr key={app.id}>
-                    <td><strong>{app.application_no}</strong></td>
-                    <td className="contact-text"><div>{app.customer_name}</div><div className="muted">{app.customer_phone}</div></td>
-                    <td>{app.fi_recommendation ? <span className={`role-pill ${app.fi_recommendation === 'positive' ? 'field_executive' : 'staff'}`}>{app.fi_recommendation}</span> : '—'}</td>
-                    <td>{app.application_status}</td>
-                    <td className="actions-cell">
-                      {collectableStatuses.has(app.application_status) ? <span className="muted">Eligible — use Collect EMI's above</span> : <span className="muted">Not available</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {collectionOpen && (
-          <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div className="admin-card" style={{ width: 'min(680px, 100%)', maxHeight: '90vh', overflowY: 'auto' }}>
-              <div className="admin-card-title">
-                <div><h2>Collect EMI's</h2><span>Search assigned loans by vehicle no., mobile no. or customer name</span></div>
-                <button type="button" className="admin-btn secondary" onClick={() => setCollectionOpen(false)}>✕ Close</button>
-              </div>
-
-              <div style={{ display: 'grid', gap: 10 }}>
-                <input
-                  autoFocus
-                  value={collectionSearch}
-                  onChange={(e) => { setCollectionSearch(e.target.value); setSelectedCollectionLoan(null); }}
-                  placeholder="Search Vehicle No. / Mobile No. / Customer Name"
-                />
-
-                <div style={{ border: '1px solid #eee', borderRadius: 10, maxHeight: 260, overflowY: 'auto' }}>
-                  {collectionMatches.length === 0 ? (
-                    <div className="empty-cell">No approved/sanctioned/disbursed assigned loan found.</div>
-                  ) : collectionMatches.map((app) => (
-                    <button
-                      type="button"
-                      key={app.id}
-                      onClick={() => selectCollectionLoan(app)}
-                      style={{ width: '100%', textAlign: 'left', border: 0, borderBottom: '1px solid #eee', background: selectedCollectionLoan?.id === app.id ? '#fff4ec' : '#fff', padding: '12px 14px', cursor: 'pointer' }}
-                    >
-                      <strong>{app.customer_name || 'Customer'}</strong>
-                      <div style={{ fontSize: 13, marginTop: 3 }}>
-                        {app.customer_phone || 'No mobile'} · {app.vehicle_no || 'No vehicle no.'}
-                      </div>
-                      <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-                        {app.application_no || app.loan_account_no || 'Loan'} · {app.application_status} · EMI ₹{Number(app.emi_amount || 0).toLocaleString('en-IN')}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {selectedCollectionLoan && (
-                  <div style={{ borderTop: '1px solid #eee', paddingTop: 14 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div><label>Name</label><input value={selectedCollectionLoan.customer_name || ''} readOnly /></div>
-                      <div><label>Mobile No.</label><input value={selectedCollectionLoan.customer_phone || ''} readOnly /></div>
-                      <div><label>Vehicle No.</label><input value={selectedCollectionLoan.vehicle_no || ''} readOnly /></div>
-                      <div><label>Loan Status</label><input value={selectedCollectionLoan.application_status || ''} readOnly /></div>
-                      <div><label>EMI Amount</label><input type="number" min="0.01" step="0.01" value={collectionAmount} onChange={(e) => setCollectionAmount(e.target.value)} /></div>
-                      <div><label>Remarks</label><input value={collectionRemarks} onChange={(e) => setCollectionRemarks(e.target.value)} placeholder="Optional" /></div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-                      <button type="button" className="admin-btn" disabled={collectingId === selectedCollectionLoan.id} onClick={() => handleCollectCash(selectedCollectionLoan)}>
-                        {collectingId === selectedCollectionLoan.id ? 'Saving…' : '✓ Collect EMI'}
-                      </button>
-                      <button type="button" className="admin-btn secondary" onClick={() => { setSelectedCollectionLoan(null); setCollectionAmount(''); setCollectionRemarks(''); }}>Clear</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
+export default function FieldExecutiveDashboard(){
+ const navigate=useNavigate(), user=getCurrentUser();
+ const [applications,setApplications]=useState([]),[history,setHistory]=useState({receipts:[],handovers:[],cash_in_hand:0,total_collected:0,total_handed_over:0}),[loading,setLoading]=useState(true),[historyLoading,setHistoryLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [activeAppId,setActiveAppId]=useState(null),[form,setForm]=useState(emptyFiForm),[saving,setSaving]=useState(false),[locating,setLocating]=useState(false),[collectionOpen,setCollectionOpen]=useState(false),[collectionSearch,setCollectionSearch]=useState(''),[selectedCollectionLoan,setSelectedCollectionLoan]=useState(null),[collectingId,setCollectingId]=useState(null),[collectionAmount,setCollectionAmount]=useState(''),[collectionRemarks,setCollectionRemarks]=useState('');
+ function logout(){clearAppUserToken();clearCurrentUser();navigate('/login',{replace:true});}
+ async function load(){setLoading(true);setError('');try{const d=await listAssignedVisits();setApplications(d.applications||[]);}catch(e){setError(e.message)}finally{setLoading(false)}}
+ async function loadHistory(){setHistoryLoading(true);try{const d=await getCollectionHistory();setHistory(d||{receipts:[],handovers:[],cash_in_hand:0});}catch(e){setError(e.message)}finally{setHistoryLoading(false)}}
+ useEffect(()=>{load();loadHistory(); const t=setInterval(loadHistory,30000); return ()=>clearInterval(t)},[]);
+ const pending=applications.filter(a=>a.application_status==='fi_pending'),completed=applications.filter(a=>a.application_status!=='fi_pending');
+ function startFi(app){setActiveAppId(app.id);setForm(emptyFiForm);setMessage('');setError('')}
+ function updateForm(k,v){setForm(c=>({...c,[k]:v}))}
+ function useMyLocation(){if(!navigator.geolocation){setError('Location is not supported on this device/browser.');return}setLocating(true);navigator.geolocation.getCurrentPosition(p=>{updateForm('latitude',p.coords.latitude.toFixed(6));updateForm('longitude',p.coords.longitude.toFixed(6));setLocating(false)},()=>{setError('Could not get GPS location. Please allow location access.');setLocating(false)})}
+ async function handleSubmitFi(e){e.preventDefault();setSaving(true);setError('');setMessage('');try{const d=await submitFieldInvestigation({loan_application_id:activeAppId,...form,monthly_income:form.monthly_income?Number(form.monthly_income):undefined,latitude:form.latitude?Number(form.latitude):undefined,longitude:form.longitude?Number(form.longitude):undefined});setMessage(d.message||'Field Investigation report submitted.');setActiveAppId(null);await load()}catch(e){setError(e.message)}finally{setSaving(false)}}
+ function openCollection(){setCollectionOpen(true);setCollectionSearch('');setSelectedCollectionLoan(null);setCollectionAmount('');setCollectionRemarks('');setError('');setMessage('')}
+ function selectCollectionLoan(a){setSelectedCollectionLoan(a);setCollectionAmount(a.emi_amount?String(a.emi_amount):'');setCollectionRemarks('');setError('')}
+ async function handleCollectCash(app){const amount=Number(collectionAmount);if(!Number.isFinite(amount)||amount<=0){setError('Enter a valid cash collection amount.');return}setCollectingId(app.id);setError('');setMessage('');try{const d=await collectCash({loan_application_id:app.id,amount,remarks:collectionRemarks});setMessage(d.message||'EMI cash collection recorded.');setCollectionAmount('');setCollectionRemarks('');setSelectedCollectionLoan(null);setCollectionSearch('');setCollectionOpen(false);await Promise.all([load(),loadHistory()])}catch(e){setError(e.message)}finally{setCollectingId(null)}}
+ const statuses=new Set(['approved','sanctioned','disbursed']), candidates=applications.filter(a=>statuses.has(a.application_status)),term=collectionSearch.trim().toLowerCase(),matches=candidates.filter(a=>!term||[a.customer_name,a.customer_phone,a.vehicle_no,a.application_no,a.loan_account_no].filter(Boolean).some(v=>String(v).toLowerCase().includes(term)));
+ return <div className="app-shell fe-shell">
+  <header className="app-header fe-header"><span>Field Executive App{user?.name?` — ${user.name}`:''}</span><div className="fe-header-actions"><button type="button" className="admin-btn small fe-collect-top" onClick={openCollection}>💰 Collect EMI's</button><div className="fe-profile-menu"><ProfileMenu compact/></div><button type="button" className="app-header-logout" onClick={logout}>↪ Logout</button></div></header>
+  <main className="app-body fe-body" id="fe-home">
+   {message&&<div className="admin-alert success">✓ {message}</div>}{error&&<div className="admin-alert error">⚠ {error}</div>}
+   <section className="fe-kpis"><div><span>Cash in Hand</span><strong>{money(history.cash_in_hand)}</strong></div><div><span>Total Collected</span><strong>{money(history.total_collected)}</strong></div><div><span>Handed to Cashier</span><strong>{money(history.total_handed_over)}</strong></div></section>
+   <section className="admin-card staff-list-card" id="fe-visits"><div className="admin-card-title"><div><h2>Today's Assigned Visits</h2><span>Pending Field Investigation</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Application</th><th>Customer</th><th>Address</th><th>Vehicle</th><th>Action</th></tr></thead><tbody>{loading?<tr><td colSpan="5" className="empty-cell">Loading…</td></tr>:pending.length===0?<tr><td colSpan="5" className="empty-cell">No visits assigned right now.</td></tr>:pending.map(a=><tr key={a.id}><td><strong>{a.application_no}</strong></td><td className="contact-text"><div>{a.customer_name}</div><div className="muted">{a.customer_phone}</div></td><td>{a.customer_address||'—'}{a.customer_city?`, ${a.customer_city}`:''}</td><td>{a.vehicle_model||'—'}</td><td className="actions-cell"><button className="admin-btn small" onClick={()=>startFi(a)}>{activeAppId===a.id?'Editing…':'Start FI'}</button></td></tr>)}</tbody></table></div>
+    {activeAppId&&<form className="staff-form" onSubmit={handleSubmitFi}><div className="admin-card-title" style={{padding:'0 0 14px'}}><div><h2>Field Investigation Report</h2><span>Application #{pending.find(a=>a.id===activeAppId)?.application_no}</span></div></div><div className="form-grid"><div><label>Visit date</label><input type="date" value={form.visit_date} onChange={e=>updateForm('visit_date',e.target.value)} required/></div><div><label>Residence type</label><select value={form.residence_type} onChange={e=>updateForm('residence_type',e.target.value)}><option value="own">Own house</option><option value="rented">Rented house</option></select></div><div><label>Mobile no.</label><input value={form.mobile_no} onChange={e=>updateForm('mobile_no',e.target.value)} maxLength="15"/></div><div><label>Monthly income</label><input type="number" min="0" value={form.monthly_income} onChange={e=>updateForm('monthly_income',e.target.value)} placeholder="₹"/></div><div><label>GPS location</label><div style={{display:'flex',gap:8}}><input value={form.latitude} onChange={e=>updateForm('latitude',e.target.value)} placeholder="Latitude"/><input value={form.longitude} onChange={e=>updateForm('longitude',e.target.value)} placeholder="Longitude"/></div><button type="button" className="admin-btn small secondary" style={{marginTop:8}} onClick={useMyLocation} disabled={locating}>{locating?'Locating…':'📍 Use my current location'}</button></div><div><label>Recommendation</label><select value={form.recommendation} onChange={e=>updateForm('recommendation',e.target.value)}><option value="positive">Positive</option><option value="negative">Negative</option></select></div><div className="full"><label>Remarks</label><input value={form.remarks} onChange={e=>updateForm('remarks',e.target.value)} placeholder="Neighbour confirmation, notes, etc."/></div></div><div style={{display:'flex',gap:10}}><button className="admin-btn" disabled={saving}>{saving?'Submitting…':'Submit FI Report'}</button><button type="button" className="admin-btn secondary" onClick={()=>setActiveAppId(null)}>Cancel</button></div></form>}
+   </section>
+   <section className="admin-card staff-list-card" id="fe-completed"><div className="admin-card-title"><div><h2>Completed</h2><span>FI already submitted</span></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Application</th><th>Customer</th><th>Result</th><th>Status</th><th>Cash Collection</th></tr></thead><tbody>{completed.length===0?<tr><td colSpan="5" className="empty-cell">No completed visits yet.</td></tr>:completed.map(a=><tr key={a.id}><td><strong>{a.application_no}</strong></td><td className="contact-text"><div>{a.customer_name}</div><div className="muted">{a.customer_phone}</div></td><td>{a.fi_recommendation?<span className={`role-pill ${a.fi_recommendation==='positive'?'field_executive':'staff'}`}>{a.fi_recommendation}</span>:'—'}</td><td>{a.application_status}</td><td className="actions-cell"><button type="button" className="admin-btn small" onClick={()=>{openCollection();setCollectionSearch(a.customer_phone||a.customer_name||a.vehicle_no||a.application_no||'')}}>💰 Collect EMI</button></td></tr>)}</tbody></table></div></section>
+   <section className="admin-card staff-list-card" id="fe-history"><div className="admin-card-title"><div><h2>Cash Collection History</h2><span>All EMI cash receipts collected by you</span></div><button className="admin-btn secondary" onClick={loadHistory} disabled={historyLoading}>↻ Refresh</button></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Vehicle</th><th>Loan</th><th>Amount</th></tr></thead><tbody>{historyLoading?<tr><td colSpan="6" className="empty-cell">Loading…</td></tr>:history.receipts?.length?history.receipts.map(r=><tr key={r.id}><td>{r.receipt_date}</td><td><strong>{r.receipt_no}</strong></td><td>{r.customer_name||'—'}<small>{r.customer_phone||''}</small></td><td>{r.vehicle_no||'—'}</td><td>{r.application_no||r.loan_account_no||'—'}</td><td><strong>{money(r.amount)}</strong></td></tr>):<tr><td colSpan="6" className="empty-cell">No cash collection recorded yet.</td></tr>}</tbody></table></div></section>
+  </main>
+  <nav className="fe-bottom-nav"><button onClick={()=>document.getElementById('fe-home')?.scrollIntoView({behavior:'smooth'})}>⌂<span>Home</span></button><button className="primary" onClick={openCollection}>₹<span>Collect EMI</span></button><button onClick={()=>document.getElementById('fe-history')?.scrollIntoView({behavior:'smooth'})}>▣<span>History</span></button><button onClick={()=>document.querySelector('.fe-profile-menu button')?.click()}>◉<span>Profile</span></button><button onClick={logout}>↪<span>Logout</span></button></nav>
+  {collectionOpen&&<div role="dialog" aria-modal="true" className="fe-modal-backdrop"><div className="fe-collection-modal"><div className="admin-card-title"><div><h2>Collect EMI's</h2><span>Search Vehicle No. / Mobile No. / Customer Name</span></div><button type="button" className="admin-btn secondary" onClick={()=>setCollectionOpen(false)}>✕ Close</button></div><input autoFocus value={collectionSearch} onChange={e=>{setCollectionSearch(e.target.value);setSelectedCollectionLoan(null)}} placeholder="Vehicle No. / Mobile No. / Customer Name"/><div className="fe-search-results">{matches.length===0?<div className="empty-cell">No approved/sanctioned/disbursed assigned loan found.</div>:matches.map(a=><button type="button" key={a.id} onClick={()=>selectCollectionLoan(a)} className={selectedCollectionLoan?.id===a.id?'selected':''}><strong>{a.customer_name||'Customer'}</strong><span>{a.customer_phone||'No mobile'} · {a.vehicle_no||'No vehicle no.'}</span><small>{a.application_no||a.loan_account_no||'Loan'} · {a.application_status} · EMI {money(a.emi_amount)}</small></button>)}</div>{selectedCollectionLoan&&<div className="fe-selected-loan"><div><label>Name</label><input value={selectedCollectionLoan.customer_name||''} readOnly/></div><div><label>Mobile No.</label><input value={selectedCollectionLoan.customer_phone||''} readOnly/></div><div><label>Vehicle No.</label><input value={selectedCollectionLoan.vehicle_no||''} readOnly/></div><div><label>Loan Status</label><input value={selectedCollectionLoan.application_status||''} readOnly/></div><div><label>EMI Amount</label><input type="number" min=".01" step=".01" value={collectionAmount} onChange={e=>setCollectionAmount(e.target.value)}/></div><div><label>Remarks</label><input value={collectionRemarks} onChange={e=>setCollectionRemarks(e.target.value)} placeholder="Optional"/></div><div className="fe-collection-actions"><button type="button" className="admin-btn" disabled={collectingId===selectedCollectionLoan.id} onClick={()=>handleCollectCash(selectedCollectionLoan)}>{collectingId===selectedCollectionLoan.id?'Saving…':'✓ Collect EMI'}</button><button type="button" className="admin-btn secondary" onClick={()=>setSelectedCollectionLoan(null)}>Clear</button></div></div>}</div></div>}
+ </div>
 }

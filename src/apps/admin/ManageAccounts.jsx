@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   createDealer, createUser, deleteDealer, deleteUser,
-  listDealers, listUsers, updateDealer, updateUser,
+  listDealers, listUsers, updateDealer, updateUser, listStaff, createStaff, deleteStaff, updateStaffContact,
 } from './api';
 
 const EMPTY = { type: 'user', full_name: '', phone: '', password: '', role: 'field_executive', email: '', dealer_name: '', dealer_code: '' };
@@ -14,6 +14,7 @@ export default function ManageAccounts() {
   const [tab, setTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [dealers, setDealers] = useState([]);
+  const [staffRows, setStaffRows] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,14 +25,15 @@ export default function ManageAccounts() {
   async function load() {
     setLoading(true); setError('');
     try {
-      const [u, d] = await Promise.all([listUsers(), listDealers()]);
+      const [u, d, st] = await Promise.all([listUsers(), listDealers(), listStaff()]);
       setUsers(u.users || []); setDealers(d.dealers || []);
+      setStaffRows((st.users || []).filter(x => x.source === 'staff_accounts'));
     } catch (e) { setError(e.message || 'Could not load accounts.'); }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
 
-  const total = users.length + dealers.length;
+  const total = users.length + dealers.length + staffRows.length;
   const dealerLogins = useMemo(() => dealers.reduce((n, d) => n + (d.users || []).length, 0), [dealers]);
   function setField(k, v) { setForm(x => ({ ...x, [k]: v })); }
   function resetForm() { setForm(EMPTY); }
@@ -43,6 +45,8 @@ export default function ManageAccounts() {
       let data;
       if (form.type === 'dealer') {
         data = await createDealer({ dealer_name: form.dealer_name, dealer_code: form.dealer_code, full_name: form.full_name, phone: form.phone, password: form.password });
+      } else if (form.type === 'cashier') {
+        data = await createStaff({ username: form.full_name, contact_mobile: form.phone, password: form.password, role: 'cashier', email: form.email });
       } else {
         data = await createUser({ full_name: form.full_name, phone: form.phone, password: form.password, role: form.role, email: form.email });
       }
@@ -57,6 +61,8 @@ export default function ManageAccounts() {
       let data;
       if (editing.kind === 'dealer') {
         data = await updateDealer({ id: editing.id, dealer_name: editing.dealer_name, dealer_code: editing.dealer_code });
+      } else if (editing.kind === 'staff') {
+        data = await updateStaffContact({ id: editing.id, role: editing.role, source: 'staff_accounts', contact_mobile: editing.contact_mobile || '', email: editing.email || '' });
       } else {
         data = await updateUser({ id: editing.id, phone: editing.phone || '', email: editing.email || '' });
       }
@@ -70,14 +76,14 @@ export default function ManageAccounts() {
     if (!window.confirm(`Remove "${label}"?`)) return;
     clearAlerts();
     try {
-      const data = item.kind === 'dealer' ? await deleteDealer(item.id) : await deleteUser(item.id);
+      const data = item.kind === 'dealer' ? await deleteDealer(item.id) : (item.kind === 'staff' ? await deleteStaff(item) : await deleteUser(item.id));
       setMessage(data.message || 'Account removed.'); await load();
     } catch (e) { setError(e.message || 'Could not remove account.'); }
   }
 
   return <div className="admin-page">
     <div className="admin-page-head">
-      <div><div className="admin-eyebrow">ADMINISTRATION</div><h1>Manage Accounts</h1><p>Team ke sabhi login yahin se banenge — Admin, Field Executive, Tele Caller, DO aur Team Leader. Alag Staff creation ab nahi hai.</p></div>
+      <div><div className="admin-eyebrow">ADMINISTRATION</div><h1>Manage Accounts</h1><p>Team users, dealers aur Cashier accounts yahin se manage honge.</p></div>
       <div className="admin-count">{total} accounts · {dealers.length} dealers</div>
     </div>
     {message && <div className="admin-alert success">✓ {message}</div>}
@@ -86,16 +92,18 @@ export default function ManageAccounts() {
     <div className="account-tabs">
       <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>Team Users ({users.length})</button>
       <button className={tab === 'dealers' ? 'active' : ''} onClick={() => setTab('dealers')}>Dealers ({dealers.length})</button>
+      <button className={tab === 'cashiers' ? 'active' : ''} onClick={() => setTab('cashiers')}>Cashiers ({staffRows.length})</button>
     </div>
 
     {tab === 'users' && <AccountTable loading={loading} rows={users} kind="user" onEdit={setEditing} onRemove={remove} />}
     {tab === 'dealers' && <DealerTable loading={loading} rows={dealers} onEdit={setEditing} onRemove={remove} />}
+    {tab === 'cashiers' && <AccountTable loading={loading} rows={staffRows} kind="staff" onEdit={setEditing} onRemove={remove} />}
 
     <section className="admin-card create-card">
       <div className="admin-card-title"><div><h2>+ Create New Account</h2><span>Dealer login bhi isi screen se create hoga</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
       <form className="staff-form" onSubmit={createAccount}>
         <div className="account-create-type">
-          {['user', 'dealer'].map(t => <button type="button" key={t} className={form.type === t ? 'active' : ''} onClick={() => { setField('type', t); if (t === 'user') setField('role', 'field_executive'); clearAlerts(); }}>{t === 'user' ? 'Team User' : 'Dealer'}</button>)}
+          {['user', 'dealer', 'cashier'].map(t => <button type="button" key={t} className={form.type === t ? 'active' : ''} onClick={() => { setField('type', t); if (t === 'user') setField('role', 'field_executive'); clearAlerts(); }}>{t === 'user' ? 'Team User' : (t === 'cashier' ? 'Cashier' : 'Dealer')}</button>)}
         </div>
         {form.type === 'dealer' ? <div className="form-grid">
           <div><label>Dealer Name</label><input value={form.dealer_name} onChange={e => setField('dealer_name', e.target.value)} required /></div>
@@ -104,7 +112,7 @@ export default function ManageAccounts() {
           <div><label>Mobile / Login ID <span>(10 digits)</span></label><input value={form.phone} onChange={e => setField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" required placeholder="98xxxxxxxx" /></div>
           <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={e => setField('password', e.target.value)} minLength="8" required /></div>
         </div> : <div className="form-grid">
-          <div><label>Full Name</label><input value={form.full_name} onChange={e => setField('full_name', e.target.value)} required /></div>
+          <div><label>{form.type === 'cashier' ? 'Cashier Name / Username' : 'Full Name'}</label><input value={form.full_name} onChange={e => setField('full_name', e.target.value)} required /></div>
           <div><label>Phone <span>(10 digits)</span></label><input value={form.phone} onChange={e => setField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" required={form.type === 'user'} /></div>
           <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={e => setField('password', e.target.value)} minLength="8" required /></div>
           {form.type === 'user' && <div><label>Role</label><select value={form.role} onChange={e => setField('role', e.target.value)}><option value="field_executive">Field Executive</option><option value="tele_caller">Tele Caller</option><option value="do">Disbursement Officer</option><option value="team_leader">Team Leader</option><option value="customer">Customer</option><option value="admin">Admin</option></select></div>}

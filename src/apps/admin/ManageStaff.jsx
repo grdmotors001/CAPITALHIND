@@ -3,7 +3,7 @@ import { createStaff, deleteStaff, listStaff, updateStaffContact } from './api';
 
 const emptyForm = { username: '', password: '', role: 'staff', contact_mobile: '', email: '' };
 
-const ROLE_LABELS = { staff: 'Staff', admin: 'Admin' };
+const ROLE_LABELS = { staff: 'Staff', cashier: 'Cashier', admin: 'Admin' };
 
 export default function ManageStaff() {
   const [users, setUsers] = useState([]);
@@ -143,7 +143,7 @@ export default function ManageStaff() {
           <div className="form-grid">
             <div><label>Username</label><input value={form.username} onChange={(e) => updateForm('username', e.target.value)} required autoComplete="off" /></div>
             <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={(e) => updateForm('password', e.target.value)} minLength="8" required autoComplete="new-password" /></div>
-            <div><label>Role</label><select value={form.role} onChange={(e) => updateForm('role', e.target.value)}><option value="staff">Staff — view records & verify/reject UPI payments</option><option value="admin">Admin — full access, manage accounts</option></select></div>
+            <div><label>Role</label><select value={form.role} onChange={(e) => updateForm('role', e.target.value)}><option value="staff">Staff — view records & verify/reject UPI payments</option><option value="cashier">Cashier — receive & track FE cash</option><option value="admin">Admin — full access, manage accounts</option></select></div>
             <div><label>Mobile {form.role === 'admin' ? <span>(login id, 10 digits)</span> : <span>(optional — OTP login)</span>}</label><input value={form.contact_mobile} onChange={(e) => updateForm('contact_mobile', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" placeholder="98xxxxxxxx" required={form.role === 'admin' && !form.email} /></div>
             <div className="full"><label>Email {form.role === 'admin' ? <span>(required if mobile is blank)</span> : <span>(optional — Google login)</span>}</label><input type="email" value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="name@gmail.com" required={form.role === 'admin' && !form.contact_mobile} /></div>
           </div>

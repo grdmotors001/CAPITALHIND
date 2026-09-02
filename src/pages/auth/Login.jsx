@@ -4,6 +4,7 @@ import { getRedirectPathForRole } from '../../utils/roleRedirect';
 import { loginDealer } from '../../apps/dealer/api';
 import { loginAdmin } from '../../apps/admin/api';
 import { loginAppUser } from '../../utils/appUserAuth';
+import { loginStaff } from '../../utils/staffAuth';
 import { requestCustomerOtp, verifyCustomerOtp, loginCustomerWithGoogle } from '../../utils/customerAuth';
 import { setCurrentUser } from '../../utils/session';
 
@@ -75,7 +76,12 @@ export default function Login() {
           const appResult = await loginAppUser({ identifier: phone, password });
           return { user: appResult.user, role: appResult.role };
         } catch {
-          throw dealerErr;
+          try {
+            const staffResult = await loginStaff({ identifier: phone, password });
+            return { user: staffResult.user, role: staffResult.role };
+          } catch {
+            throw dealerErr;
+          }
         }
       });
       afterLogin(result.role, result.user);

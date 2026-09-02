@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { getAdminToken } from '../apps/admin/api';
 import { getDealerToken } from '../apps/dealer/api';
 import { getAppUserToken } from '../utils/appUserAuth';
+import { getStaffToken } from '../utils/staffAuth';
 import { getCurrentUser, setCurrentUser } from '../utils/session';
 
 function tokenForRole(role) {
   if (role === 'admin') return getAdminToken();
   if (role === 'dealer') return getDealerToken();
+  if (role === 'staff' || role === 'cashier') return getStaffToken();
   return getAppUserToken();
 }
 

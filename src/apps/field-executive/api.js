@@ -13,3 +13,5 @@ export function submitFieldInvestigation(payload) {
 export function collectCash(payload) {
   return apiPost(BASE, 'collect-cash', payload);
 }
+
+export function getCollectionHistory() { return apiGet(BASE, 'collection-history'); }

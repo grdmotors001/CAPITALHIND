@@ -41,6 +41,8 @@ const routes = {
   '/admin/staff/update': route_admin_staff_update,
   '/admin/update-user': route_admin_update_user,
   '/collection/messages': route_collection_messages,
+  '/cashier/dashboard': route_cashier_dashboard,
+  '/cashier/collect': route_cashier_collect,
   '/customer/google-login': route_customer_google_login,
   '/customer/my-loans': route_customer_my_loans,
   '/customer/request-otp': route_customer_request_otp,
@@ -54,6 +56,7 @@ const routes = {
   '/do/decide': route_do_decide,
   '/do/list-pending': route_do_list_pending,
   '/field-executive/collect-cash': route_field_executive_collect_cash,
+  '/field-executive/collection-history': route_field_executive_collection_history,
   '/field-executive/list-assigned': route_field_executive_list_assigned,
   '/field-executive/submit-fi': route_field_executive_submit_fi,
   '/team-leader/assign-register': route_team_leader_assign_register,
@@ -63,6 +66,7 @@ const routes = {
   '/tele-caller/log-call': route_tele_caller_log_call,
   '/users/login': route_users_login,
   '/users/profile': route_users_profile,
+  '/staff/login': route_staff_login,
 };
 
 import route_admin_add_receipt from '../lib/api/admin/add-receipt.js';
@@ -104,6 +108,8 @@ import route_admin_staff_list from '../lib/api/admin/staff/list.js';
 import route_admin_staff_update from '../lib/api/admin/staff/update.js';
 import route_admin_update_user from '../lib/api/admin/update-user.js';
 import route_collection_messages from '../lib/api/collection/messages.js';
+import route_cashier_dashboard from '../lib/api/cashier/dashboard.js';
+import route_cashier_collect from '../lib/api/cashier/collect.js';
 import route_customer_google_login from '../lib/api/customer/google-login.js';
 import route_customer_my_loans from '../lib/api/customer/my-loans.js';
 import route_customer_request_otp from '../lib/api/customer/request-otp.js';
@@ -117,6 +123,7 @@ import route_dealer_upload_kyc_document from '../lib/api/dealer/upload-kyc-docum
 import route_do_decide from '../lib/api/do/decide.js';
 import route_do_list_pending from '../lib/api/do/list-pending.js';
 import route_field_executive_collect_cash from '../lib/api/field-executive/collect-cash.js';
+import route_field_executive_collection_history from '../lib/api/field-executive/collection-history.js';
 import route_field_executive_list_assigned from '../lib/api/field-executive/list-assigned.js';
 import route_field_executive_submit_fi from '../lib/api/field-executive/submit-fi.js';
 import route_team_leader_assign_register from '../lib/api/team-leader/assign-register.js';
@@ -126,6 +133,7 @@ import route_tele_caller_dashboard from '../lib/api/tele-caller/dashboard.js';
 import route_tele_caller_log_call from '../lib/api/tele-caller/log-call.js';
 import route_users_login from '../lib/api/users/login.js';
 import route_users_profile from '../lib/api/users/profile.js';
+import route_staff_login from '../lib/api/staff/login.js';
 
 export default async function handler(req, res) {
   const rawPath = req.query?.path;
