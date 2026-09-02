@@ -200,6 +200,11 @@ export function deleteLoanType(id) {
   return mastersRequest('delete-loan-type', { method: 'POST', body: { id } });
 }
 
+export function listBatteries() { return mastersRequest('batteries'); }
+export function createBattery(payload) { return mastersRequest('batteries', { method: 'POST', body: payload }); }
+export function updateBattery(payload) { return mastersRequest('batteries', { method: 'PATCH', body: payload }); }
+export function deleteBattery(id) { return mastersRequest('batteries', { method: 'DELETE', body: { id } }); }
+
 const STAFF_API_BASE = '/api/admin/staff';
 
 async function staffRequest(path, { method = 'GET', body } = {}) {

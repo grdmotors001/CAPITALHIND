@@ -27,6 +27,11 @@ export default function MastersHome() {
           <div><h3>Loan Type</h3><p>Manage the loan types dealers and staff can select on an application.</p></div>
           <b>→</b>
         </Link>
+        <Link to="batteries" className="admin-home-card">
+          <span>🔋</span>
+          <div><h3>Battery Master</h3><p>Manage battery names used in Field Executive Vehicle Repo records.</p></div>
+          <b>→</b>
+        </Link>
       </div>
     </div>
   );

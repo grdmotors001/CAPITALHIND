@@ -12,6 +12,7 @@ import ManageHP from './masters/ManageHP';
 import ManageVehicleModels from './masters/ManageVehicleModels';
 import ManageLoanTypes from './masters/ManageLoanTypes';
 import ManageOEM from './masters/ManageOEM';
+import ManageBatteries from './masters/ManageBatteries';
 import Receipts from './Receipts';
 import PaymentVouchers from './PaymentVouchers';
 import LoanCases from './LoanCases';
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/masters/hp') ? 'active' : ''} to="/app/admin/masters/hp">⚖ <span>HP (Hypothecation)</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/vehicle-models') ? 'active' : ''} to="/app/admin/masters/vehicle-models">🏍 <span>Vehicle Model</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/loan-types') ? 'active' : ''} to="/app/admin/masters/loan-types">₹ <span>Loan Type</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/masters/batteries') ? 'active' : ''} to="/app/admin/masters/batteries">🔋 <span>Battery Master</span></Link>
           <Link to="/app/accounting">▦ <span>Accounting</span></Link>
         </nav>
         <div style={{ padding: '12px 16px' }}><ProfileMenu compact /></div>
@@ -64,6 +66,7 @@ export default function AdminDashboard() {
           <Route path="masters/hp" element={<ManageHP />} />
           <Route path="masters/vehicle-models" element={<ManageVehicleModels />} />
           <Route path="masters/loan-types" element={<ManageLoanTypes />} />
+          <Route path="masters/batteries" element={<ManageBatteries />} />
         </Routes>
       </main>
     </div>

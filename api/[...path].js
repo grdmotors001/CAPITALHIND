@@ -32,6 +32,7 @@ const routes = {
   '/admin/masters/update-loan-type': route_admin_masters_update_loan_type,
   '/admin/masters/update-oem': route_admin_masters_update_oem,
   '/admin/masters/update-vehicle-model': route_admin_masters_update_vehicle_model,
+  '/admin/masters/batteries': route_admin_masters_batteries,
   '/admin/payment-vouchers': route_admin_payment_vouchers,
   '/admin/receipt-loans': route_admin_receipt_loans,
   '/admin/receipts': route_admin_receipts,
@@ -58,6 +59,7 @@ const routes = {
   '/field-executive/collect-cash': route_field_executive_collect_cash,
   '/field-executive/collection-history': route_field_executive_collection_history,
   '/field-executive/list-assigned': route_field_executive_list_assigned,
+  '/field-executive/repossession': route_field_executive_repossession,
   '/field-executive/submit-fi': route_field_executive_submit_fi,
   '/team-leader/assign-register': route_team_leader_assign_register,
   '/team-leader/overview': route_team_leader_overview,
@@ -99,6 +101,7 @@ import route_admin_masters_update_hp from '../lib/api/admin/masters/update-hp.js
 import route_admin_masters_update_loan_type from '../lib/api/admin/masters/update-loan-type.js';
 import route_admin_masters_update_oem from '../lib/api/admin/masters/update-oem.js';
 import route_admin_masters_update_vehicle_model from '../lib/api/admin/masters/update-vehicle-model.js';
+import route_admin_masters_batteries from '../lib/api/admin/masters/batteries.js';
 import route_admin_payment_vouchers from '../lib/api/admin/payment-vouchers.js';
 import route_admin_receipt_loans from '../lib/api/admin/receipt-loans.js';
 import route_admin_receipts from '../lib/api/admin/receipts.js';
@@ -125,6 +128,7 @@ import route_do_list_pending from '../lib/api/do/list-pending.js';
 import route_field_executive_collect_cash from '../lib/api/field-executive/collect-cash.js';
 import route_field_executive_collection_history from '../lib/api/field-executive/collection-history.js';
 import route_field_executive_list_assigned from '../lib/api/field-executive/list-assigned.js';
+import route_field_executive_repossession from '../lib/api/field-executive/repossession.js';
 import route_field_executive_submit_fi from '../lib/api/field-executive/submit-fi.js';
 import route_team_leader_assign_register from '../lib/api/team-leader/assign-register.js';
 import route_team_leader_overview from '../lib/api/team-leader/overview.js';
