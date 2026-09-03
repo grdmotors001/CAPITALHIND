@@ -1,8 +1,10 @@
 import ProfileMenu from '../../components/ProfileMenu';
 import CollectionActivity from '../../components/CollectionActivity';
+import ThemeToggle from '../../components/ThemeToggle';
 import { useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { clearCurrentUser } from '../../utils/session';
+import { getStoredSidebarCollapsed, setSidebarCollapsed } from '../../utils/theme';
 import { clearAdminToken, exportCibilData, getDashboardStats } from './api';
 import ManageAccounts from './ManageAccounts';
 import AssignApplications from './AssignApplications';
@@ -25,6 +27,15 @@ import CollectionRisk from './CollectionRisk';
 export default function AdminDashboard() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(getStoredSidebarCollapsed());
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      const next = !c;
+      setSidebarCollapsed(next);
+      return next;
+    });
+  }
 
   function logout() {
     // Admin auth is now a stateless JWT (see src/apps/admin/api.js), not a
@@ -36,7 +47,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-shell">
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar${collapsed ? ' collapsed' : ''}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
         <div className="admin-brand"><img src="/logo.png" alt="Capital Hind Finance" /><div><strong>Capital Hind</strong><span>Finance</span></div></div>
         <nav>
           <Link className={location.pathname === '/app/admin' ? 'active' : ''} to="/app/admin">⌂ <span>Dashboard</span></Link>
@@ -61,7 +81,8 @@ export default function AdminDashboard() {
           <Link to="/app/accounting">▦ <span>Accounting</span></Link>
         </nav>
         <div style={{ padding: '12px 16px' }}><ProfileMenu compact /></div>
-        <button className="admin-logout" onClick={logout}>↪ Logout</button>
+        <button className="admin-logout" onClick={logout}><span>↪</span><span> Logout</span></button>
+        <ThemeToggle inline />
       </aside>
       <main className="admin-main">
         <Routes>
