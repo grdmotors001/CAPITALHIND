@@ -62,6 +62,8 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState(getCurrentUser() || {});
   const [form, setForm] = useState({ full_name: '', dob: '', father_name: '', address: '', email: '', phone: '', profile_photo: '' });
+  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -104,6 +106,25 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
       setTimeout(() => setOpen(false), 650);
     } catch (e) { setError(e.message || 'Could not update profile'); }
     finally { setSaving(false); }
+  }
+
+  async function changePassword(e) {
+    e.preventDefault();
+    setError(''); setSaved('');
+    if (passwords.next.length < 8) { setError('New password must be at least 8 characters.'); return; }
+    if (passwords.next !== passwords.confirm) { setError('New password and confirmation do not match.'); return; }
+    setPasswordSaving(true);
+    try {
+      const token = tokenForRole(profile.role);
+      const { res, data } = await profileRequest('POST', token, {
+        current_password: passwords.current,
+        new_password: passwords.next,
+      });
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not change password');
+      setPasswords({ current: '', next: '', confirm: '' });
+      setSaved('Password changed successfully.');
+    } catch (e) { setError(e.message || 'Could not change password'); }
+    finally { setPasswordSaving(false); }
   }
 
   async function choosePhoto(e) {
@@ -164,6 +185,14 @@ export default function ProfileMenu({ compact = false, onUpdated }) {
               <label className="profile-field"><span>Mobile Number <b>*</b></span><input inputMode="numeric" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 15) })} required placeholder="Enter mobile number" /></label>
               <label className="profile-field"><span>Email Address</span><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="name@example.com" /></label>
               <label className="profile-field profile-field-full"><span>Address</span><textarea rows="3" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Enter complete address" /></label>
+            </div>
+
+            <div className="profile-section-title profile-security-title">Security</div>
+            <div className="profile-password-grid">
+              <label className="profile-field"><span>Current Password <b>*</b></span><input type="password" value={passwords.current} onChange={e => setPasswords({ ...passwords, current: e.target.value })} autoComplete="current-password" placeholder="Current password" /></label>
+              <label className="profile-field"><span>New Password <b>*</b></span><input type="password" value={passwords.next} onChange={e => setPasswords({ ...passwords, next: e.target.value })} minLength="8" autoComplete="new-password" placeholder="Minimum 8 characters" /></label>
+              <label className="profile-field"><span>Confirm Password <b>*</b></span><input type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} minLength="8" autoComplete="new-password" placeholder="Repeat new password" /></label>
+              <button type="button" className="profile-btn profile-btn-primary profile-password-btn" onClick={changePassword} disabled={passwordSaving}>{passwordSaving ? 'Changing…' : '🔐 Change Password'}</button>
             </div>
 
             <div className="profile-modal-actions">

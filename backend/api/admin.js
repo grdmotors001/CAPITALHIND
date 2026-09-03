@@ -6,6 +6,7 @@ import route_create_user_3 from '../lib/api/admin/create-user.js';
 import route_dashboard_stats_4 from '../lib/api/admin/dashboard-stats.js';
 import route_dealers_5 from '../lib/api/admin/dealers.js';
 import route_delete_user_6 from '../lib/api/admin/delete-user.js';
+import route_reset_password_6b from '../lib/api/admin/reset-password.js';
 import route_export_cibil_7 from '../lib/api/admin/export-cibil.js';
 import route_import_loan_cases_8 from '../lib/api/admin/import-loan-cases.js';
 import route_import_receipts_9 from '../lib/api/admin/import-receipts.js';
@@ -62,6 +63,7 @@ const routes = {
   '/dashboard-stats': route_dashboard_stats_4,
   '/dealers': route_dealers_5,
   '/delete-user': route_delete_user_6,
+  '/reset-password': route_reset_password_6b,
   '/export-cibil': route_export_cibil_7,
   '/import-loan-cases': route_import_loan_cases_8,
   '/import-receipts': route_import_receipts_9,

@@ -966,3 +966,79 @@ html[data-theme="dark"] .login-card { background:#111013; color:var(--ink); }
 @media (max-width: 900px) {
   .theme-toggle-btn { bottom: 92px; right: 14px; width: 40px; height: 40px; font-size: 17px; }
 }
+
+/* ===== Navigation, header theme control & universal dark mode ===== */
+.admin-sidebar,
+.role-side-nav { overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; }
+.admin-sidebar nav,
+.role-side-nav nav { min-height:0; }
+.admin-sidebar::-webkit-scrollbar,
+.role-side-nav::-webkit-scrollbar { width:6px; }
+.admin-sidebar::-webkit-scrollbar-thumb,
+.role-side-nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,.28); border-radius:10px; }
+
+/* Keep the global theme control in the header area instead of covering content. */
+.theme-toggle-btn {
+  top:12px;
+  bottom:auto;
+  right:18px;
+  width:auto;
+  min-width:44px;
+  height:38px;
+  padding:0 12px;
+  border-radius:10px;
+  font-size:14px;
+  z-index:5000;
+}
+.theme-toggle-btn::after { content:' Mode'; font-size:11px; font-weight:800; }
+@media(max-width:900px){
+  .theme-toggle-btn { top:10px; right:10px; min-width:40px; height:36px; padding:0 9px; }
+  .theme-toggle-btn::after { content:''; }
+}
+
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .cashier-shell,
+html[data-theme="dark"] .tele-shell,
+html[data-theme="dark"] .team-shell,
+html[data-theme="dark"] .dealer-shell,
+html[data-theme="dark"] .app-main,
+html[data-theme="dark"] .cashier-main,
+html[data-theme="dark"] .tele-main,
+html[data-theme="dark"] .team-main,
+html[data-theme="dark"] .dealer-main,
+html[data-theme="dark"] .app-body,
+html[data-theme="dark"] .accounting-page { background:var(--page-bg); color:var(--ink); }
+html[data-theme="dark"] .app-header,
+html[data-theme="dark"] .cashier-header,
+html[data-theme="dark"] .tele-header,
+html[data-theme="dark"] .team-header,
+html[data-theme="dark"] .dealer-header { background:var(--surface); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .cashier-card,
+html[data-theme="dark"] .tele-card,
+html[data-theme="dark"] .team-card,
+html[data-theme="dark"] .dealer-card,
+html[data-theme="dark"] .app-card,
+html[data-theme="dark"] .tvr-card,
+html[data-theme="dark"] .tvr-review,
+html[data-theme="dark"] .fe-kpis > div,
+html[data-theme="dark"] .profile-modal { background:var(--surface); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .role-bottom-nav { background:var(--surface); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .role-bottom-nav button { color:var(--ink); }
+html[data-theme="dark"] .tele-work-list button,
+html[data-theme="dark"] .tele-follow-list button { border-color:var(--line); color:var(--maroon-heading); }
+html[data-theme="dark"] .admin-table-wrap { border-color:var(--line); }
+html[data-theme="dark"] .admin-table th { background:#282329; }
+html[data-theme="dark"] .admin-table td { border-color:var(--line); }
+html[data-theme="dark"] .profile-trigger { background:var(--surface); color:var(--ink); border-color:var(--line); }
+html[data-theme="dark"] .profile-modal-backdrop { background:rgba(0,0,0,.72); }
+
+.profile-security-title { margin-top:18px; }
+.profile-password-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
+.profile-password-btn { min-height:42px; border:0; cursor:pointer; }
+@media(max-width:720px){ .profile-password-grid { grid-template-columns:1fr; } }
+
+@media(max-width:900px){
+  .admin-main,.admin-page { padding-bottom:88px; }
+  .admin-sidebar { overflow-y:auto; }
+}

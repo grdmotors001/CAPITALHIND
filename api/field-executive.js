@@ -4,6 +4,8 @@ import route_list_assigned_1 from '../lib/api/field-executive/list-assigned.js';
 import route_submit_fi_2 from '../lib/api/field-executive/submit-fi.js';
 import route_list_tvr_3 from '../lib/api/field-executive/list-tvr.js';
 import route_submit_tvr_4 from '../lib/api/field-executive/submit-tvr.js';
+import route_collection_history_5 from '../lib/api/field-executive/collection-history.js';
+import route_repossession_6 from '../lib/api/field-executive/repossession.js';
 
 const routes = {
   '/collect-cash': route_collect_cash_0,
@@ -11,6 +13,8 @@ const routes = {
   '/submit-fi': route_submit_fi_2,
   '/list-tvr': route_list_tvr_3,
   '/submit-tvr': route_submit_tvr_4,
+  '/collection-history': route_collection_history_5,
+  '/repossession': route_repossession_6,
 };
 
 export default async function handler(req, res) {
