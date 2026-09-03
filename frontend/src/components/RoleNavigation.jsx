@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProfileMenu from './ProfileMenu';
+import ThemeToggle from './ThemeToggle';
 import { clearCurrentUser } from '../utils/session';
 import { clearAppUserToken } from '../utils/appUserAuth';
 import { clearStaffToken } from '../utils/staffAuth';
 import { clearDealerToken } from '../apps/dealer/api';
+import { getStoredSidebarCollapsed, setSidebarCollapsed } from '../utils/theme';
 
 const labels = {
   field_executive: 'Field Executive',
@@ -19,6 +21,15 @@ const labels = {
 export default function RoleNavigation({ role, onLogout }) {
   const navigate = useNavigate();
   const title = labels[role] || 'Portal';
+  const [collapsed, setCollapsed] = useState(getStoredSidebarCollapsed());
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      setSidebarCollapsed(next);
+      return next;
+    });
+  };
 
   const logout = () => {
     clearAppUserToken();
@@ -54,7 +65,16 @@ export default function RoleNavigation({ role, onLogout }) {
 
   return (
     <>
-      <aside className="role-side-nav">
+      <aside className={`role-side-nav${collapsed ? ' collapsed' : ''}`}>
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? '›' : '‹'}
+        </button>
         <div className="role-nav-brand">
           <img src="/logo.png" alt="Capital Hind Finance" />
           <div><strong>Capital Hind</strong><span>Finance</span></div>
@@ -71,6 +91,7 @@ export default function RoleNavigation({ role, onLogout }) {
         <button className="role-nav-logout" type="button" onClick={logout}>
           <span>↪</span><span>Logout</span>
         </button>
+        <ThemeToggle inline />
       </aside>
 
       {role !== 'field_executive' && (

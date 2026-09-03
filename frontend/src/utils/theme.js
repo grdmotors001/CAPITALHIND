@@ -33,3 +33,30 @@ export function setTheme(theme) {
 export function initTheme() {
   applyTheme(getPreferredTheme());
 }
+
+const COLLAPSE_KEY = 'chfpl_sidebar_collapsed';
+
+export function getStoredSidebarCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+export function applySidebarCollapsed(collapsed) {
+  document.body.classList.toggle('sidebar-collapsed', !!collapsed);
+}
+
+export function setSidebarCollapsed(collapsed) {
+  applySidebarCollapsed(collapsed);
+  try {
+    localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+  } catch (e) {
+    /* ignore storage errors (private mode etc.) */
+  }
+}
+
+export function initSidebarCollapsed() {
+  applySidebarCollapsed(getStoredSidebarCollapsed());
+}
