@@ -6,6 +6,33 @@ function money(value) {
   return Number.isFinite(n) ? `₹${n.toLocaleString('en-IN')}` : '—';
 }
 
+function ManualLoanForm() {
+  const [form,setForm]=useState({dealer:'',customer:'',phone:'',model:'',vehicle_price:'',down_payment:'',loan_amount:'',tenure:'36',loan_type:'NEW',financer:'',vehicle_no:'',chassis_no:'',disbursement_date:'',disbursed_amount:''});
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(''); const [err,setErr]=useState('');
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const submit=async e=>{e.preventDefault();setSaving(true);setMsg('');setErr('');try{const d=await createLoan({manual:true,...form});setMsg(d.message||'Manual loan created successfully.');}catch(x){setErr(x.message||'Could not create loan.')}finally{setSaving(false)}};
+  return <form className="staff-form" onSubmit={submit}>
+    {msg&&<div className="admin-alert success">✓ {msg}</div>}{err&&<div className="admin-alert error">⚠ {err}</div>}
+    <div className="form-grid">
+      <div><label>Dealer *</label><input required value={form.dealer} onChange={e=>set('dealer',e.target.value)} placeholder="Enter dealer name/code"/></div>
+      <div><label>Customer Name *</label><input required value={form.customer} onChange={e=>set('customer',e.target.value)}/></div>
+      <div><label>Mobile *</label><input required maxLength="10" value={form.phone} onChange={e=>set('phone',e.target.value.replace(/\D/g,'').slice(0,10))}/></div>
+      <div><label>Vehicle Model</label><input value={form.model} onChange={e=>set('model',e.target.value)}/></div>
+      <div><label>Vehicle Price</label><input type="number" min="0" value={form.vehicle_price} onChange={e=>{set('vehicle_price',e.target.value);set('loan_amount',Math.max(0,Number(e.target.value||0)-Number(form.down_payment||0)))}}/></div>
+      <div><label>Down Payment</label><input type="number" min="0" value={form.down_payment} onChange={e=>{set('down_payment',e.target.value);set('loan_amount',Math.max(0,Number(form.vehicle_price||0)-Number(e.target.value||0)))}}/></div>
+      <div><label>Loan Amount *</label><input required type="number" min="1" value={form.loan_amount} onChange={e=>set('loan_amount',e.target.value)}/></div>
+      <div><label>Tenure (Months)</label><select value={form.tenure} onChange={e=>set('tenure',e.target.value)}>{[12,18,24,30,36,48].map(x=><option key={x}>{x}</option>)}</select></div>
+      <div><label>Loan Type</label><select value={form.loan_type} onChange={e=>set('loan_type',e.target.value)}><option value="NEW">NEW MODEL</option><option value="OLD">OLD MODEL</option></select></div>
+      <div><label>Financer / HP</label><input value={form.financer} onChange={e=>set('financer',e.target.value)} placeholder="Enter financer"/></div>
+      <div><label>Vehicle No.</label><input value={form.vehicle_no} onChange={e=>set('vehicle_no',e.target.value.toUpperCase())}/></div>
+      <div><label>Chassis No.</label><input value={form.chassis_no} onChange={e=>set('chassis_no',e.target.value.toUpperCase())}/></div>
+      <div><label>Disbursement Date</label><input type="date" value={form.disbursement_date} onChange={e=>set('disbursement_date',e.target.value)}/></div>
+      <div><label>Disbursed Amount</label><input type="number" min="0" value={form.disbursed_amount} onChange={e=>set('disbursed_amount',e.target.value)}/></div>
+    </div>
+    <button className="admin-btn" disabled={saving}>{saving?'Creating…':'✓ Create Manual Loan'}</button>
+  </form>;
+}
+
 export default function CreateLoan() {
   const [applications, setApplications] = useState([]);
   const [selectedId, setSelectedId] = useState('');
@@ -117,7 +144,7 @@ export default function CreateLoan() {
         </div>
       </section>
 
-      {selected && (
+\n      <section className="admin-card staff-list-card" style={{ marginTop: 20 }}>\n        <div className="admin-card-title"><div><h2>Manual Create Loan</h2><span>Dealer manually enter karein. Ye direct admin loan entry hai.</span></div></div>\n        <ManualLoanForm />\n      </section>\n\n      {selected && (
         <section className="admin-card staff-list-card" style={{ marginTop: 20 }}>
           <div className="admin-card-title">
             <div><h2>Loan Details</h2><span>Application data automatically loaded from approved loan.</span></div>
