@@ -1255,3 +1255,80 @@ button, input, select, textarea { max-width: 100%; }
   .role-bottom-nav button { font-size: 15px; }
   .role-bottom-nav button span { font-size: 8px; }
 }
+
+
+/* Admin mobile navigation */
+.admin-mobile-nav{display:none}
+@media(max-width:900px){
+  .admin-shell{display:block;min-height:100vh;width:100%;overflow-x:hidden}
+  .admin-sidebar{
+    display:none !important;
+  }
+  .admin-main{
+    margin:0 !important;
+    width:100% !important;
+    min-width:0 !important;
+    padding:0 !important;
+  }
+  .admin-page{
+    width:100%;
+    max-width:none;
+    min-width:0;
+    padding:20px 12px 92px !important;
+  }
+  .admin-page-head h1{font-size:25px;line-height:1.15}
+  .admin-page-head p{font-size:13px;line-height:1.45}
+  .admin-home-grid{
+    grid-template-columns:1fr !important;
+    gap:12px;
+  }
+  .admin-home-card{
+    width:100%;
+    min-width:0;
+    padding:18px;
+    gap:12px;
+  }
+  .admin-home-card h3{font-size:18px}
+  .admin-home-card p{font-size:12px}
+  .admin-home-card>b{flex:0 0 auto}
+  .admin-chart-grid{grid-template-columns:1fr !important}
+  .admin-month-grid{grid-template-columns:1fr !important}
+  .admin-card{width:100%;max-width:100%;overflow:hidden}
+  .admin-mobile-nav{
+    position:fixed;
+    display:grid !important;
+    grid-template-columns:repeat(5,1fr);
+    left:0;right:0;bottom:0;
+    z-index:5000;
+    background:var(--surface);
+    border-top:1px solid var(--line);
+    box-shadow:0 -8px 24px rgba(36,16,20,.16);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .admin-mobile-nav a,.admin-mobile-nav button{
+    min-width:0;
+    border:0;
+    background:transparent;
+    color:var(--maroon-heading);
+    text-decoration:none;
+    font:inherit;
+    font-size:18px;
+    font-weight:900;
+    text-align:center;
+    padding:4px 2px;
+  }
+  .admin-mobile-nav a span,.admin-mobile-nav button span{
+    display:block;
+    font-size:9px;
+    font-weight:800;
+    margin-top:2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}
+@media(max-width:380px){
+  .admin-page{padding-left:9px !important;padding-right:9px !important}
+  .admin-mobile-nav a,.admin-mobile-nav button{font-size:16px}
+  .admin-mobile-nav a span,.admin-mobile-nav button span{font-size:8px}
+}
