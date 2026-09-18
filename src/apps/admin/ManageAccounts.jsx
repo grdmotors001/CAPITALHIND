@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  createUser, deleteDealer, deleteUser,
+  createUser, deleteUser,
   listDealers, listUsers, updateDealer, updateUser, listStaff, createStaff, deleteStaff, updateStaffContact,
 } from './api';
 
