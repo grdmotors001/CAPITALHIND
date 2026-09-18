@@ -21,6 +21,7 @@ import RepoCases from './RepoCases';
 import Reports from './Reports';
 import AdminTools from './AdminTools';
 import CollectionRisk from './CollectionRisk';
+import ManualCreateLoan from './ManualCreateLoan';
 
 export default function AdminDashboard() {
   const location = useLocation();
@@ -61,6 +62,7 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/accounts') ? 'active' : ''} to="/app/admin/accounts">♟ <span>Manage Accounts</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/assign') ? 'active' : ''} to="/app/admin/assign">➤ <span>Assign Applications</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/create-loan') ? 'active' : ''} to="/app/admin/create-loan">▣ <span>Create Loan</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/manual-create-loan') ? 'active' : ''} to="/app/admin/manual-create-loan">✚ <span>Manual Create Loan</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/payment-vouchers') ? 'active' : ''} to="/app/admin/payment-vouchers">₹ <span>Payment Vouchers</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/receipts') ? 'active' : ''} to="/app/admin/receipts">▤ <span>Receipts</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/import') ? 'active' : ''} to="/app/admin/import">⇧ <span>Data Import</span></Link>
@@ -96,6 +98,7 @@ export default function AdminDashboard() {
           <Route path="accounts" element={<ManageAccounts />} />
           <Route path="assign" element={<AssignApplications />} />
           <Route path="create-loan" element={<CreateLoan />} />
+          <Route path="manual-create-loan" element={<ManualCreateLoan />} />
           <Route path="payment-vouchers" element={<PaymentVouchers />} />
           <Route path="receipts" element={<Receipts />} />
           <Route path="import" element={<AdminTools />} />
@@ -127,6 +130,7 @@ function AdminHome() {
         <Link to="accounts" className="admin-home-card"><span>♟</span><div><h3>Manage Accounts</h3><p>Dealer aur sabhi Team Users — Admin, Field Executive, Tele Caller, DO aur Team Leader — ek hi jagah manage karein.</p></div><b>→</b></Link>
         <Link to="assign" className="admin-home-card"><span>➤</span><div><h3>Assign Applications</h3><p>CIBIL score check karke Field Executive ko FI assign karein.</p></div><b>→</b></Link>
         <Link to="create-loan" className="admin-home-card"><span>▣</span><div><h3>Create Loan</h3><p>Approved application se complete loan entry create karein.</p></div><b>→</b></Link>
+        <Link to="manual-create-loan" className="admin-home-card"><span>✚</span><div><h3>Manual Create Loan</h3><p>Admin se direct loan application create karein; dealer manually enter hoga.</p></div><b>→</b></Link>
         <Link to="receipts" className="admin-home-card"><span>▤</span><div><h3>Receipts</h3><p>Loan select karke amount/date se receipt entry aur loan detail PDF print karein.</p></div><b>→</b></Link>
         <Link to="payment-vouchers" className="admin-home-card"><span>₹</span><div><h3>Payment Vouchers</h3><p>Tele Caller, FE aur other incentives/payments record karein.</p></div><b>→</b></Link>
         <Link to="loan-cases" className="admin-home-card"><span>▤</span><div><h3>Loan Cases</h3><p>Active, suit filed, vehicle seized aur file/ledger details manage karein.</p></div><b>→</b></Link>
