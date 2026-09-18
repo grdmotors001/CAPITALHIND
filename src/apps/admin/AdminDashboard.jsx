@@ -80,6 +80,16 @@ export default function AdminDashboard() {
         <button className="admin-logout" onClick={logout}><span>↪</span><span> Logout</span></button>
         <ThemeToggle inline />
       </aside>
+      <nav className="admin-mobile-nav" aria-label="Admin mobile navigation">
+        <Link to="/app/admin">⌂<span>Home</span></Link>
+        <Link to="/app/admin/accounts">♟<span>Accounts</span></Link>
+        <Link to="/app/admin/assign">➤<span>Assign</span></Link>
+        <Link to="/app/admin/receipts">▤<span>Receipts</span></Link>
+        <button type="button" onClick={() => {
+          const el = document.querySelector('.profile-trigger');
+          if (el) el.click();
+        }}>◉<span>Profile</span></button>
+      </nav>
       <main className="admin-main">
         <Routes>
           <Route index element={<AdminHome />} />
