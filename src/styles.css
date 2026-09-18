@@ -1089,3 +1089,169 @@ html[data-theme="dark"] .profile-modal-backdrop { background:rgba(0,0,0,.72); }
   .admin-main,.admin-page { padding-bottom:88px; }
   .admin-sidebar { overflow-y:auto; }
 }
+
+
+/* =========================================================
+   CAPITAL HIND responsive hardening
+   Desktop: fluid content with fixed role navigation.
+   Mobile: full-width content + compact header + bottom nav.
+   ========================================================= */
+html, body, #root { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+
+@media (min-width: 901px) {
+  .role-side-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 230px;
+    z-index: 2400;
+    overflow-y: auto;
+  }
+  .admin-sidebar { z-index: 2400; overflow-y: auto; }
+  .dealer-main,.cashier-main,.tele-main,.team-main,.app-main,.fe-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .role-side-nav { display: none !important; }
+  .role-bottom-nav { display: grid !important; }
+  .fe-shell,.tele-shell,.team-shell,.dealer-shell,.cashier-shell,.app-shell,.customer-shell {
+    padding-left: 0 !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dealer-header,.cashier-header,.tele-header,.team-header,.app-header {
+    padding: 12px 14px;
+    min-height: 58px;
+  }
+  .dealer-brand,.tele-brand,.team-brand { font-size: 16px; }
+  .dealer-header-sub,.tele-sub,.team-sub { font-size: 9px; }
+  .dealer-header-actions,.cashier-head-actions,.tele-header-right,.team-header-right {
+    gap: 6px;
+    min-width: 0;
+  }
+  .dealer-header-actions > *,.cashier-head-actions > *,.tele-header-right > *,.team-header-right > * {
+    max-width: 44vw;
+  }
+  .dealer-main,.cashier-main,.tele-main,.team-main,.app-main {
+    padding: 18px 12px 88px;
+  }
+
+  .dealer-page-head,.tele-page-head,.team-page-head,.cashier-welcome {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .dealer-page-head h1,.tele-page-head h1,.team-page-head h1 { font-size: 24px; }
+  .dealer-primary,.dealer-page-head button,.tele-page-head button,.team-page-head button,.cashier-refresh {
+    width: 100%;
+  }
+
+  .dealer-kpis,.cashier-kpis,.tele-kpis,.team-kpis {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 10px;
+  }
+  .dealer-kpi,.cashier-kpis>div,.tele-kpis>div,.team-kpis>div {
+    padding: 14px;
+  }
+  .dealer-kpi strong,.cashier-kpis strong,.tele-kpis strong,.team-kpis strong { font-size: 22px; }
+
+  .dealer-grid,.tele-grid,.team-grid,.tele-work-grid,.tele-bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dealer-card-head,.cashier-card-head,.tele-card-head,.team-card-head {
+    padding: 15px;
+  }
+  .dealer-table,.cashier-table,.tele-table,.team-table {
+    min-width: 760px;
+  }
+
+  .form-grid { grid-template-columns: 1fr; }
+  .form-field-full { grid-column: auto; }
+  .form-step { padding: 16px; }
+  .step-indicator { overflow-x: auto; padding-bottom: 4px; }
+  .step-item { min-width: 78px; }
+
+  .admin-sidebar {
+    width: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+  .admin-sidebar .sidebar-collapse-btn { display: none; }
+  .admin-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  .admin-page { padding: 18px 12px 86px; width: 100%; }
+  .admin-page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .admin-page-head h1 { font-size: 24px; }
+  .admin-card { border-radius: 12px; }
+  .admin-card-title { padding: 15px; }
+  .admin-table { min-width: 700px; }
+}
+
+@media (max-width: 600px) {
+  .dealer-kpis,.cashier-kpis,.tele-kpis,.team-kpis {
+    grid-template-columns: 1fr;
+  }
+  .dealer-main,.cashier-main,.tele-main,.team-main,.app-main {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .dealer-card,.cashier-card,.tele-card,.team-card,.admin-card { border-radius: 10px; }
+  .dealer-card-head,.cashier-card-head,.tele-card-head,.team-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dealer-modal-backdrop,.cashier-modal-backdrop,.tele-modal-backdrop {
+    padding: 8px;
+  }
+  .dealer-modal,.cashier-modal,.tele-modal,.tele-modal-large {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .dealer-modal-actions,.tele-modal-actions {
+    flex-direction: column-reverse;
+  }
+  .dealer-modal-actions > button,.tele-modal-actions > button,
+  .cashier-modal > div > button { width: 100%; }
+  .tele-toolbar {
+    padding: 12px;
+    align-items: stretch;
+  }
+  .tele-filters { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .tele-filters button { flex: 0 0 auto; }
+  .tele-table,.team-table,.dealer-table,.cashier-table { min-width: 680px; }
+  .doc-upload-row { flex-wrap: wrap; }
+  .doc-upload-label { width: 100%; }
+  .review-grid { grid-template-columns: 1fr; }
+  .form-nav { flex-direction: column-reverse; }
+  .form-nav > button { width: 100%; }
+  .admin-home-grid { grid-template-columns: 1fr; }
+  .admin-table-wrap,.dealer-table-wrap,.cashier-table-wrap,.tele-table-wrap,.team-table-wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 380px) {
+  .dealer-main,.cashier-main,.tele-main,.team-main,.app-main { padding-left: 8px; padding-right: 8px; }
+  .dealer-brand,.tele-brand,.team-brand { font-size: 14px; }
+  .role-bottom-nav button { font-size: 15px; }
+  .role-bottom-nav button span { font-size: 8px; }
+}
