@@ -120,7 +120,7 @@ function AdminHome() {
         <Link to="receipts" className="admin-home-card"><span>▤</span><div><h3>Receipts</h3><p>Loan select karke amount/date se receipt entry aur loan detail PDF print karein.</p></div><b>→</b></Link>
         <Link to="payment-vouchers" className="admin-home-card"><span>₹</span><div><h3>Payment Vouchers</h3><p>Tele Caller, FE aur other incentives/payments record karein.</p></div><b>→</b></Link>
         <Link to="loan-cases" className="admin-home-card"><span>▤</span><div><h3>Loan Cases</h3><p>Active, suit filed, vehicle seized aur file/ledger details manage karein.</p></div><b>→</b></Link>
-        <Link to="masters" className="admin-home-card"><span>☰</span><div><h3>Masters</h3><p>HP, Vehicle Model and Loan Type master data.</p></div><b>→</b></Link>
+        <Link to="masters" className="admin-home-card"><span>☰</span><div><h3>Masters</h3><p>HP, OEM and Battery master data.</p></div><b>→</b></Link>
         <Link to="reports" className="admin-home-card"><span>▤</span><div><h3>Reports</h3><p>Day Book, collections, expenses, NOC, repo and loan ledger reports.</p></div><b>→</b></Link>
         <Link to="collection-risk" className="admin-home-card"><span>⚠</span><div><h3>Collection & Risk</h3><p>NPA ageing, penal/bounce config aur restructure-foreclosure requests.</p></div><b>→</b></Link>
         <Link to="/app/accounting" className="admin-home-card"><span>▦</span><div><h3>Accounting</h3><p>Open accounting and finance module.</p></div><b>→</b></Link>
