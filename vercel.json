@@ -37,6 +37,10 @@
       "destination": "/api/users?path=:path*"
     },
     {
+      "source": "/api/staff/:path*",
+      "destination": "/api/staff?path=:path*"
+    },
+    {
       "source": "/admin/react-login.php",
       "destination": "/api/admin?path=login"
     },
