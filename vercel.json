@@ -13,8 +13,8 @@
       "destination": "/api/customer?path=:path*"
     },
     {
-      "source": "/api/dealer/((?!grd-submit-loan).*)",
-      "destination": "/api/dealer?path=:path*"
+      "source": "/api/dealer/:path((?!grd-submit-loan).*)",
+      "destination": "/api/dealer?path=:path"
     },
     {
       "source": "/api/do/:path*",
