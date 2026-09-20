@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/grd-submit-loan",
-      "destination": "/api/dealer?path=grd-submit-loan"
-    },
-    {
       "source": "/api/admin/:path*",
       "destination": "/api/admin?path=:path*"
     },
