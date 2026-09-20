@@ -5,6 +5,7 @@ import route_list_vehicle_models_2 from '../lib/api/dealer/list-vehicle-models.j
 import route_login_3 from '../lib/api/dealer/login.js';
 import route_profile_4 from '../lib/api/dealer/profile.js';
 import route_upload_kyc_document_5 from '../lib/api/dealer/upload-kyc-document.js';
+import route_grd_submit_loan_6 from '../lib/api/dealer/grd-submit-loan.js';
 
 const routes = {
   '/create-loan-application': route_create_loan_application_0,
@@ -13,6 +14,7 @@ const routes = {
   '/login': route_login_3,
   '/profile': route_profile_4,
   '/upload-kyc-document': route_upload_kyc_document_5,
+  '/grd-submit-loan': route_grd_submit_loan_6,
 };
 
 export default async function handler(req, res) {
