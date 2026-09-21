@@ -8,7 +8,7 @@ export default async function handler(req,res){
   try{
     const s=getSupabase();
     const {data,error}=await s.from('vehicle_repossessions').select(`
-      id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no,
+      id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no, model_name, colour, toolkit,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
       parked_dealer_id, resale_status, remarks, created_at,
       loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone)),
