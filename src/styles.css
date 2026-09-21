@@ -1332,3 +1332,10 @@ button, input, select, textarea { max-width: 100%; }
   .admin-mobile-nav a,.admin-mobile-nav button{font-size:16px}
   .admin-mobile-nav a span,.admin-mobile-nav button span{font-size:8px}
 }
+
+/* Loan Application pipeline tabs */
+.loan-app-top-tabs{display:flex;gap:8px;align-items:center;margin:0 0 16px;padding:6px;background:var(--soft,#f7f1ef);border:1px solid var(--border,#eadbd5);border-radius:12px;overflow:auto}
+.loan-app-top-tabs button{border:0;background:transparent;color:var(--text,#3b2730);font-weight:800;padding:11px 16px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.loan-app-top-tabs button:hover{background:rgba(255,255,255,.7)}
+.loan-app-top-tabs button.active{background:var(--maroon,#8b1238);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.loan-app-top-tabs button b{margin-left:7px;font-size:12px;opacity:.85}
