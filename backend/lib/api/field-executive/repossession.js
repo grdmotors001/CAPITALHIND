@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       const [{ data: batteries, error: bErr }, { data: dealers, error: dErr }, { data: repos, error: rErr }] = await Promise.all([
         s.from('battery_master').select('id,battery_name').eq('is_active', true).order('battery_name'),
         s.from('dealer_master').select('id,dealer_name,dealer_code').eq('is_active', true).order('dealer_name'),
-        s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
+        s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,model_name,colour,toolkit,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,resale_status,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone),vehicle_model_master(model_name))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
       ]);
       if (bErr || dErr || rErr) {
         console.error('[field-executive/repossession GET]', bErr?.message || dErr?.message || rErr?.message);
@@ -44,6 +44,9 @@ export default async function handler(req, res) {
     const battery_no = String(body.battery_no || '').trim();
     const battery_master_id = body.battery_master_id ? Number(body.battery_master_id) : null;
     const parked_dealer_id = body.parked_dealer_id ? Number(body.parked_dealer_id) : null;
+    const model_name = String(body.model_name || '').trim();
+    const colour = String(body.colour || '').trim();
+    const toolkit = String(body.toolkit || '').trim();
     const remarks = String(body.remarks || '').trim();
 
     if (!Number.isInteger(loan_application_id) || !vehicle_no || !repo_date || !repo_time || !parked_dealer_id) {
@@ -79,10 +82,11 @@ export default async function handler(req, res) {
 
     const { data: repo, error: repoErr } = await s.from('vehicle_repossessions').insert({
       loan_application_id, repo_date, repo_time, seized_by_fe_id: session.user_id, vehicle_no,
+      model_name: model_name || null, colour: colour || null, toolkit: toolkit || null,
       battery_available, battery_no: battery_available ? battery_no : null,
       battery_master_id: battery_available ? battery_master_id : null,
       rc_available, charger_available, parked_dealer_id, remarks: remarks || null,
-    }).select('id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at').single();
+    }).select('id,loan_application_id,repo_date,repo_time,vehicle_no,model_name,colour,toolkit,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,resale_status,remarks,created_at').single();
     if (repoErr) {
       console.error('[field-executive/repossession insert]', repoErr.message);
       if (repoErr.code === '23505') return sendError(res, 409, 'Repo is already recorded for this loan.');
