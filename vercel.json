@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/grd/:path*",
+      "destination": "/api/grd?path=:path*"
+    },
+    {
       "source": "/api/admin/:path*",
       "destination": "/api/admin?path=:path*"
     },
