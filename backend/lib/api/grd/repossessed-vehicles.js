@@ -13,7 +13,7 @@ export default async function handler(req,res){
     if(req.method==='GET'){
       const status=String(req.query?.status||'AVAILABLE_FOR_SALE').trim().toUpperCase();
       const allowed=['SEIZED','AVAILABLE_FOR_SALE','ALLOCATED_TO_GRD','SOLD'];
-      const q=s.from('vehicle_repossessions').select('id, loan_application_id, repo_date, repo_time, vehicle_no, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone),grd_model_id,grd_model_code,grd_model_name)').order('repo_date',{ascending:false}).order('repo_time',{ascending:false}).limit(500);
+      const q=s.from('vehicle_repossessions').select('id, loan_application_id, repo_date, repo_time, vehicle_no, model_name, colour, toolkit, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone),grd_model_id,grd_model_code,grd_model_name)').order('repo_date',{ascending:false}).order('repo_time',{ascending:false}).limit(500);
       const {data,error}=allowed.includes(status)?await q.eq('resale_status',status):await q;
       if(error) return res.status(500).json({success:false,error:'Could not load repossessed vehicles.'});
       return res.status(200).json({success:true,vehicles:data||[]});
