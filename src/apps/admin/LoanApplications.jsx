@@ -9,7 +9,7 @@ const statusFor = (a) => {
   if (s === 'disbursed') return { key:'disbursed', label:'Disbursed', cls:'field_executive' };
   if (s === 'fi_pending' || s === 'submitted') return { key:'fe', label:'Pending at FE', cls:'staff' };
   if (s === 'fi_done') return { key:'do', label:'Pending at DO', cls:'staff' };
-  if (s === 'approved' && tvr === 'pending') return { key:'tvr', label:'Pending at FE — TVR', cls:'staff' };
+  if (s === 'approved') return { key:'bill', label:'Pending for Bill', cls:'field_executive' };
   if (s === 'approved' && tvr === 'submitted') return { key:'do', label:'Pending at DO — TVR', cls:'staff' };
   if (s === 'approved' && tvr === 'hold') return { key:'tvr', label:'TVR On Hold', cls:'staff' };
   if (s === 'approved' && tvr === 'failed') return { key:'tvr', label:'TVR Failed', cls:'staff' };
@@ -86,6 +86,7 @@ export default function LoanApplications() {
     <div className="loan-app-top-tabs">
       {[
         ['all','ALL APPLICATION',apps.length],
+        ['bill','PENDING FOR BILL',counts.bill||0],
         ['fe','AT FE',counts.fe||0],
         ['do','AT DO',counts.do||0],
         ['tvr','AT TVR',counts.tvr||0]
@@ -99,7 +100,7 @@ export default function LoanApplications() {
     <section className="admin-card staff-list-card">
       <div className="admin-card-title">
         <div>
-          <h2>{tab==='all'?'All Applications':tab==='fe'?'Applications at FE':tab==='do'?'Applications at DO':'Applications at TVR'}</h2>
+          <h2>{tab==='all'?'All Applications':tab==='bill'?'Pending for Bill':tab==='fe'?'Applications at FE':tab==='do'?'Applications at DO':'Applications at TVR'}</h2>
           <span>Current workflow status is shown for every application.</span>
         </div>
         <input
