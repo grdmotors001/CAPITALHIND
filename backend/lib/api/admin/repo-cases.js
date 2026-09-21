@@ -10,7 +10,7 @@ export default async function handler(req,res){
     const {data,error}=await s.from('vehicle_repossessions').select(`
       id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
-      parked_dealer_id, remarks, created_at,
+      parked_dealer_id, resale_status, remarks, created_at,
       loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone)),
       battery_master(battery_name), dealer_master(dealer_name,dealer_code)
     `).order('repo_date',{ascending:false}).order('repo_time',{ascending:false}).limit(500);
