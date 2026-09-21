@@ -114,7 +114,7 @@ export default function ManageAccounts() {
           <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={e => setField('password', e.target.value)} minLength="8" required /></div>
           {form.type === 'user' && <div><label>Role</label><select value={form.role} onChange={e => setField('role', e.target.value)}><option value="field_executive">Field Executive</option><option value="tele_caller">Tele Caller</option><option value="do">Disbursement Officer</option><option value="team_leader">Team Leader</option><option value="customer">Customer</option><option value="admin">Admin</option></select></div>}
           <div><label>Email <span>(optional)</span></label><input type="email" value={form.email} onChange={e => setField('email', e.target.value)} /></div>
-        </div>}
+        </div>
         <button className="admin-btn" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</button>
       </form>
     </section>
