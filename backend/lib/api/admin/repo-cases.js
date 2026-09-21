@@ -3,10 +3,19 @@ import { getSupabase } from '../_lib/supabase.js';
 import { requireAdminAuth, sendError, methodGuard } from '../_lib/auth.js';
 
 export default async function handler(req,res){
-  if(!methodGuard(req,res,'GET')) return;
   const session=requireAdminAuth(req,res); if(!session)return;
   try{
     const s=getSupabase();
+    if(req.method==='POST'){
+      const id=String(req.body?.id||'').trim();
+      const status=String(req.body?.resale_status||'').trim().toUpperCase();
+      const allowed=['SEIZED','AVAILABLE_FOR_SALE','ALLOCATED_TO_GRD','SOLD'];
+      if(!id||!allowed.includes(status)) return sendError(res,422,'Invalid repo status update.');
+      const {data,error}=await s.from('vehicle_repossessions').update({resale_status:status}).eq('id',id).select('id,resale_status').single();
+      if(error) return sendError(res,500,'Could not update Repo status.');
+      return res.status(200).json({success:true,repo:data});
+    }
+    if(!methodGuard(req,res,'GET')) return;
     const {data,error}=await s.from('vehicle_repossessions').select(`
       id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no, model_name, colour, toolkit,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
