@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       created_at: row.created_at,
       physical_register_serial_no: row.physical_register_serial_no,
       approval_valid_until: row.approval_valid_until,
-      approved_at: row.approved_at, tvr_status,
+      approved_at: row.approved_at, tvr_status: row.tvr_status,
       customer: row.customer_profiles || null,
       vehicle_model: row.vehicle_model_master?.model_name || null,
       dealer_name: row.dealer_master?.dealer_name || null,
