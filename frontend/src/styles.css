@@ -1511,3 +1511,163 @@ button, input, select, textarea { max-width: 100%; }
     font-size: 19px;
   }
 }
+
+
+/* Vehicle Repo — responsive redesign */
+.fe-repo-modal{
+  width:min(820px,calc(100vw - 28px));
+  max-height:min(94vh,900px);
+  padding:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.fe-repo-head{
+  flex:0 0 auto;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 20px 14px;
+  border-bottom:1px solid #eee2df;
+  background:#fff;
+}
+.fe-repo-head h2{margin:3px 0 3px;color:var(--maroon-heading);font-size:21px}
+.fe-repo-head span{font-size:12px;color:var(--ink-soft)}
+.fe-repo-head .admin-btn{flex:0 0 auto}
+.fe-repo-summary{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  margin:0;
+  border:0;
+  border-radius:0;
+  border-bottom:1px solid #f0e5e1;
+  padding:12px 20px;
+  background:#fffaf7;
+}
+.fe-repo-summary div{
+  min-width:0;
+  padding:4px 12px;
+  border-right:1px solid #eee2df;
+}
+.fe-repo-summary div:first-child{padding-left:0}
+.fe-repo-summary div:last-child{border-right:0}
+.fe-repo-summary span{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.fe-repo-section{
+  margin:12px 20px 0;
+  padding:14px;
+  border:1px solid #eee2df;
+  border-radius:12px;
+  background:#fff;
+}
+.fe-repo-section-title{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:11px;
+}
+.fe-repo-section-title strong{font-size:13px;color:var(--maroon-heading)}
+.fe-repo-section-title span{font-size:11px;color:var(--ink-soft)}
+.fe-repo-form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px 14px;
+}
+.fe-repo-form-grid>div{min-width:0}
+.fe-repo-form-grid .full{grid-column:1/-1}
+.fe-repo-form-grid label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  font-size:12px;
+  font-weight:800;
+  color:var(--maroon-heading);
+}
+.fe-repo-form-grid input,
+.fe-repo-form-grid select{
+  width:100%;
+  min-height:42px;
+  padding:10px 11px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  color:var(--ink);
+  font:inherit;
+  box-sizing:border-box;
+}
+.fe-repo-form-grid input:focus,
+.fe-repo-form-grid select:focus,
+.fe-repo-remarks:focus{
+  outline:none;
+  border-color:var(--maroon);
+  box-shadow:0 0 0 3px rgba(122,23,48,.08);
+}
+.fe-repo-hint{display:block;margin-top:6px;font-size:11px;line-height:1.4;color:var(--ink-soft)}
+.fe-repo-remarks{
+  display:block;
+  width:100%;
+  min-height:78px;
+  box-sizing:border-box;
+  resize:vertical;
+  padding:10px 11px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  font:inherit;
+}
+.fe-repo-actions{
+  flex:0 0 auto;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:14px 20px calc(14px + env(safe-area-inset-bottom));
+  margin-top:12px;
+  border-top:1px solid #eee2df;
+  background:#fff;
+}
+@media(max-width:700px){
+  .fe-modal-backdrop{padding:8px}
+  .fe-repo-modal{
+    width:100%;
+    max-height:96vh;
+    border-radius:14px;
+  }
+  .fe-repo-head{padding:14px 14px 12px}
+  .fe-repo-head h2{font-size:18px}
+  .fe-repo-summary{
+    grid-template-columns:1fr;
+    gap:0;
+    padding:8px 14px;
+  }
+  .fe-repo-summary div,
+  .fe-repo-summary div:first-child{
+    border-right:0;
+    border-bottom:1px solid #eee2df;
+    padding:7px 0;
+  }
+  .fe-repo-summary div:last-child{border-bottom:0}
+  .fe-repo-section{margin:10px 12px 0;padding:12px}
+  .fe-repo-section-title{display:block}
+  .fe-repo-section-title span{display:block;margin-top:3px}
+  .fe-repo-form-grid{grid-template-columns:1fr;gap:10px}
+  .fe-repo-form-grid .full{grid-column:auto}
+  .fe-repo-form-grid input,
+  .fe-repo-form-grid select{min-height:44px}
+  .fe-repo-actions{
+    padding:12px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .fe-repo-actions .admin-btn{width:100%;min-height:44px}
+}
+@media(min-width:701px){
+  .fe-repo-modal{overflow-y:auto}
+  .fe-repo-head,
+  .fe-repo-actions{position:sticky;z-index:2}
+  .fe-repo-head{top:0}
+  .fe-repo-actions{bottom:0}
+}
