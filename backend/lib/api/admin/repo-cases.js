@@ -3,10 +3,49 @@ import { getSupabase } from '../_lib/supabase.js';
 import { requireAdminAuth, sendError, methodGuard } from '../_lib/auth.js';
 
 export default async function handler(req,res){
-  if(!methodGuard(req,res,'GET')) return;
+  if(!['GET','POST'].includes(req.method)){
+    res.setHeader('Allow','GET, POST');
+    return sendError(res,405,'Method not allowed');
+  }
   const session=requireAdminAuth(req,res); if(!session)return;
   try{
     const s=getSupabase();
+
+    if(req.method==='POST'){
+      const id=String(req.body?.id||'').trim();
+      if(!id) return sendError(res,400,'Repo id is required.');
+
+      const patch={};
+      if(req.body && Object.prototype.hasOwnProperty.call(req.body,'resale_status')){
+        const status=String(req.body.resale_status||'').trim().toUpperCase();
+        const allowed=['SEIZED','AVAILABLE_FOR_SALE','ALLOCATED_TO_GRD','SOLD'];
+        if(!allowed.includes(status)) return sendError(res,400,'Invalid resale status.');
+        patch.resale_status=status;
+      }
+      if(req.body && Object.prototype.hasOwnProperty.call(req.body,'parked_dealer_id')){
+        const raw=req.body.parked_dealer_id;
+        const dealerId=raw===null || raw==='' ? null : String(raw).trim();
+        if(dealerId){
+          const {data:dealer,error:dealerError}=await s.from('dealer_master').select('id').eq('id',dealerId).maybeSingle();
+          if(dealerError) return sendError(res,500,'Could not validate dealer.');
+          if(!dealer) return sendError(res,404,'Dealer not found.');
+          patch.parked_dealer_id=dealerId;
+        }else{
+          patch.parked_dealer_id=null;
+        }
+      }
+      if(!Object.keys(patch).length) return sendError(res,400,'No Repo changes supplied.');
+
+      const {data,error}=await s.from('vehicle_repossessions')
+        .update(patch).eq('id',id)
+        .select('id,resale_status,parked_dealer_id')
+        .single();
+      if(error){
+        console.error('[admin/repo-cases POST]',error.message);
+        return sendError(res,500,'Could not update Repo record.');
+      }
+      return res.status(200).json({success:true,repo:data});
+    }
     const {data,error}=await s.from('vehicle_repossessions').select(`
       id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
