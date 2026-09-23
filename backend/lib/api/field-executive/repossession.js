@@ -22,7 +22,37 @@ export default async function handler(req, res) {
   try {
     const s = getSupabase();
     if (req.method === 'GET') {
-      const masters = await fetchGrdMasters();
+      // GRD is the dealer source of truth. If the bridge is temporarily
+      // unavailable, fall back to the already-linked CHFPL dealer mirror so
+      // the Repo form still shows selectable dealers.
+      let dealers = [];
+      try {
+        const masters = await fetchGrdMasters();
+        dealers = mapGrdDealers(masters);
+      } catch (err) {
+        console.error('[field-executive/repossession dealers]', err.message || err);
+        const { data: localDealers, error: localDealerErr } = await s.from('dealer_master')
+          .select('id,dealer_name,dealer_code,grd_dealer_id')
+          .eq('is_active', true)
+          .neq('dealer_code', 'GRD-FACTORY')
+          .order('dealer_name');
+        if (localDealerErr) {
+          console.error('[field-executive/repossession local dealers]', localDealerErr.message);
+        } else {
+          dealers = (localDealers || []).map(d => ({
+            id: d.grd_dealer_id || d.id,
+            grd_dealer_id: d.grd_dealer_id || d.id,
+            dealer_code: d.dealer_code || '',
+            dealer_name: d.dealer_name || '',
+            mobile: '',
+            state: '',
+            state_code: '',
+            source: d.grd_dealer_id ? 'grd-mirror' : 'local',
+            users: [],
+          }));
+        }
+      }
+
       const [{ data: batteries, error: bErr }, { data: repos, error: rErr }] = await Promise.all([
         s.from('battery_master').select('id,battery_name').eq('is_active', true).order('battery_name'),
         s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
@@ -31,7 +61,7 @@ export default async function handler(req, res) {
         console.error('[field-executive/repossession GET]', bErr?.message || rErr?.message);
         return sendError(res, 500, 'Could not load Repo options/history.');
       }
-      return res.status(200).json({ success: true, batteries: batteries || [], dealers: mapGrdDealers(masters), repossessions: repos || [] });
+      return res.status(200).json({ success: true, batteries: batteries || [], dealers, repossessions: repos || [] });
     }
     if (!methodGuard(req, res, 'POST')) return;
     const body = req.body || {};
