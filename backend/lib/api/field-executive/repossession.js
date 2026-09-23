@@ -71,12 +71,18 @@ export default async function handler(req, res) {
     }
     if (loan.case_status === 'vehicle_seized') return sendError(res, 409, 'Repo is already recorded for this loan.');
 
-    const [{ data: battery, error: batteryErr }, dealerResult] = await Promise.all([
-      battery_available ? s.from('battery_master').select('id,battery_name').eq('id', battery_master_id).eq('is_active', true).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      resolveParkedDealer(s, parkedDealerInput),
-    ]);
-    const dealer = dealerResult;
+    const { data: battery, error: batteryErr } = battery_available
+      ? await s.from('battery_master').select('id,battery_name').eq('id', battery_master_id).eq('is_active', true).maybeSingle()
+      : { data: null, error: null };
     if (batteryErr || (battery_available && !battery)) return sendError(res, 422, 'Selected Battery master is invalid.');
+
+    let dealer;
+    try {
+      dealer = await resolveParkedDealer(s, parkedDealerInput);
+    } catch (err) {
+      console.error('[field-executive/repossession dealer]', err.message || err);
+      return sendError(res, 422, err.message || 'Selected parked Dealer is invalid.');
+    }
     if (!dealer || !dealer.id) return sendError(res, 422, 'Selected parked Dealer is invalid.');
     const parked_dealer_id = dealer.id;
 
