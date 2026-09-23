@@ -2,6 +2,7 @@
 // Field Executive records a vehicle repossession ("Repo") against an assigned loan.
 import { getSupabase } from '../_lib/supabase.js';
 import { requireUserAuth, sendError, methodGuard } from '../_lib/auth.js';
+import { fetchGrdMasters, mapGrdDealers, resolveParkedDealer } from '../_lib/grd.js';
 
 async function canAccessLoan(supabase, loan, session) {
   if (loan.assigned_fe_id === session.user_id) return true;
@@ -21,16 +22,16 @@ export default async function handler(req, res) {
   try {
     const s = getSupabase();
     if (req.method === 'GET') {
-      const [{ data: batteries, error: bErr }, { data: dealers, error: dErr }, { data: repos, error: rErr }] = await Promise.all([
+      const masters = await fetchGrdMasters();
+      const [{ data: batteries, error: bErr }, { data: repos, error: rErr }] = await Promise.all([
         s.from('battery_master').select('id,battery_name').eq('is_active', true).order('battery_name'),
-        s.from('dealer_master').select('id,dealer_name,dealer_code').eq('is_active', true).order('dealer_name'),
         s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
       ]);
-      if (bErr || dErr || rErr) {
-        console.error('[field-executive/repossession GET]', bErr?.message || dErr?.message || rErr?.message);
+      if (bErr || rErr) {
+        console.error('[field-executive/repossession GET]', bErr?.message || rErr?.message);
         return sendError(res, 500, 'Could not load Repo options/history.');
       }
-      return res.status(200).json({ success: true, batteries: batteries || [], dealers: dealers || [], repossessions: repos || [] });
+      return res.status(200).json({ success: true, batteries: batteries || [], dealers: mapGrdDealers(masters), repossessions: repos || [] });
     }
     if (!methodGuard(req, res, 'POST')) return;
     const body = req.body || {};
@@ -43,10 +44,10 @@ export default async function handler(req, res) {
     const charger_available = body.charger_available === true || body.charger_available === 'true';
     const battery_no = String(body.battery_no || '').trim();
     const battery_master_id = body.battery_master_id ? Number(body.battery_master_id) : null;
-    const parked_dealer_id = body.parked_dealer_id ? Number(body.parked_dealer_id) : null;
+    const parkedDealerInput = String(body.parked_dealer_id ?? '').trim();
     const remarks = String(body.remarks || '').trim();
 
-    if (!Number.isInteger(loan_application_id) || !vehicle_no || !repo_date || !repo_time || !parked_dealer_id) {
+    if (!Number.isInteger(loan_application_id) || !vehicle_no || !repo_date || !repo_time || !parkedDealerInput) {
       return sendError(res, 422, 'Loan, Repo date/time, Vehicle No. and parked Dealer are required.');
     }
     if (battery_available && (!battery_master_id || !battery_no)) {
@@ -70,12 +71,14 @@ export default async function handler(req, res) {
     }
     if (loan.case_status === 'vehicle_seized') return sendError(res, 409, 'Repo is already recorded for this loan.');
 
-    const [{ data: battery, error: batteryErr }, { data: dealer, error: dealerErr }] = await Promise.all([
+    const [{ data: battery, error: batteryErr }, dealerResult] = await Promise.all([
       battery_available ? s.from('battery_master').select('id,battery_name').eq('id', battery_master_id).eq('is_active', true).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      s.from('dealer_master').select('id,dealer_name').eq('id', parked_dealer_id).eq('is_active', true).maybeSingle(),
+      resolveParkedDealer(s, parkedDealerInput),
     ]);
+    const dealer = dealerResult;
     if (batteryErr || (battery_available && !battery)) return sendError(res, 422, 'Selected Battery master is invalid.');
-    if (dealerErr || !dealer) return sendError(res, 422, 'Selected parked Dealer is invalid.');
+    if (!dealer || !dealer.id) return sendError(res, 422, 'Selected parked Dealer is invalid.');
+    const parked_dealer_id = dealer.id;
 
     const { data: repo, error: repoErr } = await s.from('vehicle_repossessions').insert({
       loan_application_id, repo_date, repo_time, seized_by_fe_id: session.user_id, vehicle_no,
