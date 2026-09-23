@@ -128,11 +128,11 @@ export default function LoanApplicationForm() {
   const [submitted, setSubmitted] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  const demo = createDemoData();
-  const [customer, setCustomer] = useState(demo.customer);
-  const [vehicleLoan, setVehicleLoan] = useState(demo.vehicleLoan);
-  const [kyc, setKyc] = useState(demo.kyc);
-  const [guarantorData, setGuarantorData] = useState(demo.guarantorData);
+  // Live form starts empty. Demo/test data must never be submitted accidentally.
+  const [customer, setCustomer] = useState({ full_name:'', phone:'', email:'', dob:'', gender:'', pan:'', aadhaar:'', occupation:'', monthly_income:'', pincode:'', city:'', state:'', address:'' });
+  const [vehicleLoan, setVehicleLoan] = useState({ vehicle_model_id:'', vehicle_price:'', down_payment:'', loan_amount_requested:'', tenure_months:'', physical_register_serial_no:'' });
+  const [kyc, setKyc] = useState({ documents:{} });
+  const [guarantorData, setGuarantorData] = useState({ guarantors:[{ full_name:'', relation_with_customer:'', phone:'', address:'', pan:'', aadhaar_masked:'' }] });
   const [errors, setErrors] = useState({});
 
   function validateCurrentStep() {
