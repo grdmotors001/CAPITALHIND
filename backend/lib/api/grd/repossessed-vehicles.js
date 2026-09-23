@@ -33,16 +33,40 @@ export default async function handler(req,res){
       const dealerId=requestedDealerId(req);
 
       let q=s.from('vehicle_repossessions')
-        .select('id, loan_application_id, repo_date, repo_time, vehicle_no, model_name, colour, toolkit, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, dealer_master(dealer_name,dealer_code), loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone),grd_model_id,grd_model_code,grd_model_name)')
+        .select('id, loan_application_id, repo_date, repo_time, vehicle_no, model_name, colour, toolkit, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, dealer_master(id,dealer_name,dealer_code,grd_dealer_id), loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone),grd_model_id,grd_model_code,grd_model_name)')
         .in('resale_status',statuses)
         .order('repo_date',{ascending:false})
         .order('repo_time',{ascending:false})
         .limit(500);
 
-      // When a dealer id is supplied, return only vehicles physically parked
-      // at that dealer. This prevents one GRD dealer from seeing another
-      // dealer's seized/available-for-sale stock.
-      if(dealerId) q=q.eq('parked_dealer_id',dealerId);
+      // dealer_id is the GRD dealer id, NOT CHFPL's local dealer_master.id.
+      // Resolve the stable cross-system identity first:
+      //   GRD dealer.id -> CHFPL dealer_master.grd_dealer_id
+      // Then filter vehicle_repossessions by the resolved local id.
+      // Example: GRD Keshavpur 23 -> CHFPL dealer_master 310.
+      if(dealerId){
+        const {data: mappedDealer, error: mapError}=await s.from('dealer_master')
+          .select('id,dealer_name,dealer_code,grd_dealer_id')
+          .eq('grd_dealer_id',dealerId)
+          .maybeSingle();
+
+        if(mapError){
+          console.error('[grd/repossessed] dealer identity lookup',mapError);
+          return res.status(500).json({
+            success:false,
+            error:'Could not resolve GRD dealer identity.'
+          });
+        }
+
+        if(!mappedDealer){
+          return res.status(409).json({
+            success:false,
+            error:'GRD dealer is not mapped to a CHFPL dealer_master record.'
+          });
+        }
+
+        q=q.eq('parked_dealer_id',mappedDealer.id);
+      }
 
       const {data,error}=await q;
       if(error) return res.status(500).json({success:false,error:'Could not load repossessed vehicles.'});
