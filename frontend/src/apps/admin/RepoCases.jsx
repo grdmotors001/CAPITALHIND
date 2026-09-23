@@ -9,12 +9,25 @@ export default function RepoCases(){
 
  function dealerForRow(row){
    const parked=row.dealer_master||{};
-   return dealers.find(d=>
-     String(d.id)===String(row.parked_dealer_id||'') ||
-     String(d.grd_dealer_id||'')===String(parked.grd_dealer_id||'') ||
-     (norm(d.dealer_name) && norm(d.dealer_name)===norm(parked.dealer_name)) ||
-     (norm(d.dealer_code) && norm(d.dealer_code)===norm(parked.dealer_code))
-   )||null;
+   // parked_dealer_id is the CHFPL dealer_master.id, while dealer.id is the
+   // GRD dealer id. Never compare those two numeric IDs directly because they
+   // can collide (e.g. CHFPL Keshavpur id 310 vs a GRD dealer id 310).
+   const byGrdId = parked.grd_dealer_id
+     ? dealers.find(d=>String(d.grd_dealer_id||'')===String(parked.grd_dealer_id))
+     : null;
+   if(byGrdId)return byGrdId;
+
+   const byCode = parked.dealer_code
+     ? dealers.find(d=>norm(d.dealer_code)===norm(parked.dealer_code))
+     : null;
+   if(byCode)return byCode;
+
+   const byName = parked.dealer_name
+     ? dealers.find(d=>norm(d.dealer_name)===norm(parked.dealer_name))
+     : null;
+   if(byName)return byName;
+
+   return null;
  }
 
  async function updateRepo(id,patch){
