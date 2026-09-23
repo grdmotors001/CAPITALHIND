@@ -116,6 +116,37 @@ export async function resolveGrdDealer(supabase, grdDealerId, masters = null) {
   return inserted.data;
 }
 
+export async function ensureGrdFactoryDealer(supabase) {
+  const existing = await supabase.from('dealer_master')
+    .select('id,dealer_name,dealer_code,grd_dealer_id')
+    .eq('dealer_code', 'GRD-FACTORY')
+    .maybeSingle();
+  if (existing.error) throw new Error('Could not load GRD Factory identity.');
+  if (existing.data) return existing.data;
+
+  const inserted = await supabase.from('dealer_master')
+    .insert({ dealer_name: 'GRD Factory', dealer_code: 'GRD-FACTORY', is_active: true })
+    .select('id,dealer_name,dealer_code,grd_dealer_id')
+    .single();
+  if (inserted.error && inserted.error.code === '23505') {
+    const retry = await supabase.from('dealer_master')
+      .select('id,dealer_name,dealer_code,grd_dealer_id')
+      .eq('dealer_code', 'GRD-FACTORY')
+      .maybeSingle();
+    if (!retry.error && retry.data) return retry.data;
+  }
+  if (inserted.error) throw new Error('Could not create GRD Factory identity.');
+  return inserted.data;
+}
+
+export async function resolveParkedDealer(supabase, dealerId, masters = null) {
+  const raw = String(dealerId ?? '').trim();
+  if (raw.toLowerCase() === 'factory' || raw.toLowerCase() === 'grd-factory') {
+    return ensureGrdFactoryDealer(supabase);
+  }
+  return resolveGrdDealer(supabase, raw, masters);
+}
+
 export function mapGrdModels(data) {
   return (data.models || []).map((m) => ({
     id: m.id,
