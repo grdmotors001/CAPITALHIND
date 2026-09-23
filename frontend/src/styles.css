@@ -421,58 +421,132 @@ body {
   margin: 0 auto;
 }
 
-/* --- Accounting layout (sidebar + content) --- */
+/* --- Accounting layout (sidebar + content) ---
+   Same fixed-sidebar / shifted-content pattern as the admin & role
+   sidebars (230px, matching z-index tier), so it never overlaps the
+   page and behaves consistently across the app. On screens <=900px
+   the sidebar becomes an off-canvas drawer opened from a small top
+   bar, exactly like the rest of the app collapses to a bottom nav. */
+.accounting-topbar { display: none; }
+
 .accounting-shell {
-  display: flex;
   min-height: 100vh;
+  background: #f7f4f2;
 }
 
 .accounting-sidebar {
-  width: 220px;
-  background: #1a1a1a;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 230px;
+  background: var(--maroon);
   color: #fff;
-  padding: 20px 0;
-  flex-shrink: 0;
+  padding: 22px 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  z-index: 2400;
+  transition: transform .2s ease;
 }
 
 .sidebar-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .4px;
   padding: 0 20px 16px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255,255,255,.16);
   margin-bottom: 8px;
+  color: #fde7db;
+  text-transform: uppercase;
 }
 
 .sidebar-home-link {
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255,255,255,.16);
   margin-bottom: 8px;
   padding-bottom: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
 }
 
 .sidebar-link {
-  display: block;
-  padding: 10px 20px;
-  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  color: #fde7db;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
+.sidebar-link-icon { flex: 0 0 auto; }
+
 .sidebar-link:hover {
-  background: #2a2a2a;
+  background: rgba(255,255,255,.08);
   color: #fff;
 }
 
 .sidebar-link.active {
-  background: #333;
-  color: #fff;
-  border-left: 3px solid #4a90d9;
+  background: var(--surface);
+  color: var(--maroon);
+  border-left: 3px solid var(--orange, #e8792f);
+  padding-left: 17px;
 }
 
 .accounting-content {
-  flex: 1;
-  padding: 24px 32px;
+  margin-left: 230px;
+  min-width: 0;
+  padding: 30px 32px;
+  box-sizing: border-box;
+}
+
+.accounting-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .accounting-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 2600;
+    background: var(--maroon);
+    color: #fff;
+    padding: 14px 16px;
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .accounting-hamburger {
+    border: 1px solid rgba(255,255,255,.3);
+    background: transparent;
+    color: #fff;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .accounting-sidebar {
+    transform: translateX(-100%);
+    width: 250px;
+    box-shadow: 8px 0 30px rgba(0,0,0,.25);
+  }
+  .accounting-shell.sidebar-open .accounting-sidebar {
+    transform: translateX(0);
+  }
+  .accounting-shell.sidebar-open .accounting-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,8,12,.45);
+    z-index: 2300;
+  }
+  .accounting-content {
+    margin-left: 0;
+    padding: 18px 14px 32px;
+    width: 100%;
+  }
 }
 
 .page-wireframe h2 {

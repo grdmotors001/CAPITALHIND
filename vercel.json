@@ -1,16 +1,75 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-
   "builds": [
     {
-      "src": "backend/api/**/*.js",
+      "src": "backend/api/admin.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": [
-          "backend/lib/**",
-          "backend/api/**"
-        ]
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/dealer.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/do.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/field-executive.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/grd-submit-loan.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/grd.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/misc.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/workflow/available-loans.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/workflow/deliveries.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
+      }
+    },
+    {
+      "src": "backend/api/workflow/sales.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/lib/**", "backend/api/**"]
       }
     },
     {
@@ -21,7 +80,6 @@
       }
     }
   ],
-
   "routes": [
     {
       "src": "/api/grd/(.*)",
@@ -39,7 +97,6 @@
       "src": "/api/dealer/grd-submit-loan",
       "dest": "/backend/api/dealer.js?path=grd-submit-loan"
     },
-
     {
       "src": "/admin/react-login\\.php",
       "dest": "/backend/api/admin.js?path=login"
@@ -52,14 +109,13 @@
       "src": "/api/admin/(.*)",
       "dest": "/backend/api/admin.js?path=$1"
     },
-
     {
       "src": "/api/collection/(.*)",
-      "dest": "/backend/api/collection.js?path=$1"
+      "dest": "/backend/api/misc.js?path=collection/$1"
     },
     {
       "src": "/api/customer/(.*)",
-      "dest": "/backend/api/customer.js?path=$1"
+      "dest": "/backend/api/misc.js?path=customer/$1"
     },
     {
       "src": "/api/dealer/(.*)",
@@ -75,21 +131,20 @@
     },
     {
       "src": "/api/team-leader/(.*)",
-      "dest": "/backend/api/team-leader.js?path=$1"
+      "dest": "/backend/api/misc.js?path=team-leader/$1"
     },
     {
       "src": "/api/tele-caller/(.*)",
-      "dest": "/backend/api/tele-caller.js?path=$1"
+      "dest": "/backend/api/misc.js?path=tele-caller/$1"
     },
     {
       "src": "/api/users/(.*)",
-      "dest": "/backend/api/users.js?path=$1"
+      "dest": "/backend/api/misc.js?path=users/$1"
     },
     {
       "src": "/api/staff/(.*)",
-      "dest": "/backend/api/staff.js?path=$1"
+      "dest": "/backend/api/misc.js?path=staff/$1"
     },
-
     {
       "src": "/api/workflow/available-loans",
       "dest": "/backend/api/workflow/available-loans.js"
@@ -102,17 +157,15 @@
       "src": "/api/workflow/sales",
       "dest": "/backend/api/workflow/sales.js"
     },
-
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|txt|map|webmanifest))",
-      "dest": "/frontend/dist/$1"
+      "dest": "/frontend/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
+      "dest": "/frontend/index.html"
     }
   ],
-
   "headers": [
     {
       "source": "/",
