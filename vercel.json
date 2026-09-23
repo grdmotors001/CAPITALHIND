@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+
   "builds": [
     {
       "src": "backend/api/**/*.js",
@@ -20,6 +21,7 @@
       }
     }
   ],
+
   "routes": [
     {
       "src": "/api/grd/(.*)",
@@ -37,6 +39,7 @@
       "src": "/api/dealer/grd-submit-loan",
       "dest": "/backend/api/dealer.js?path=grd-submit-loan"
     },
+
     {
       "src": "/admin/react-login\\.php",
       "dest": "/backend/api/admin.js?path=login"
@@ -49,6 +52,7 @@
       "src": "/api/admin/(.*)",
       "dest": "/backend/api/admin.js?path=$1"
     },
+
     {
       "src": "/api/collection/(.*)",
       "dest": "/backend/api/collection.js?path=$1"
@@ -85,6 +89,7 @@
       "src": "/api/staff/(.*)",
       "dest": "/backend/api/staff.js?path=$1"
     },
+
     {
       "src": "/api/workflow/available-loans",
       "dest": "/backend/api/workflow/available-loans.js"
@@ -97,6 +102,7 @@
       "src": "/api/workflow/sales",
       "dest": "/backend/api/workflow/sales.js"
     },
+
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|txt|map|webmanifest))",
       "dest": "/frontend/dist/$1"
@@ -106,6 +112,7 @@
       "dest": "/frontend/dist/index.html"
     }
   ],
+
   "headers": [
     {
       "source": "/",
