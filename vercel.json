@@ -22,6 +22,14 @@
   ],
   "routes": [
     {
+      "src": "/api/grd/(.*)",
+      "dest": "/backend/api/grd.js?path=$1"
+    },
+    {
+      "src": "/api/grd",
+      "dest": "/backend/api/grd.js"
+    },
+    {
       "src": "/api/grd-submit-loan",
       "dest": "/backend/api/grd-submit-loan.js"
     },
@@ -30,8 +38,12 @@
       "dest": "/backend/api/dealer.js?path=grd-submit-loan"
     },
     {
+      "src": "/admin/react-login\\.php",
+      "dest": "/backend/api/admin.js?path=login"
+    },
+    {
       "src": "/api/admin/react-login\\.php",
-      "dest": "/backend/api/admin.js?path=react-login.php"
+      "dest": "/backend/api/admin.js?path=login"
     },
     {
       "src": "/api/admin/(.*)",
@@ -92,6 +104,26 @@
     {
       "src": "/(.*)",
       "dest": "/frontend/dist/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
     }
   ]
 }
