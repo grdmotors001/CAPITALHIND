@@ -144,7 +144,21 @@ export async function resolveParkedDealer(supabase, dealerId, masters = null) {
   if (raw.toLowerCase() === 'factory' || raw.toLowerCase() === 'grd-factory') {
     return ensureGrdFactoryDealer(supabase);
   }
-  return resolveGrdDealer(supabase, raw, masters);
+
+  // Normal path: the UI sends the current GRD dealer id.
+  try {
+    return await resolveGrdDealer(supabase, raw, masters);
+  } catch (grdErr) {
+    // Recovery path: if the GRD master bridge is temporarily unavailable,
+    // allow an already-linked CHFPL dealer_master row to be used. This keeps
+    // the Repo form usable instead of showing only "GRD Factory".
+    const local = await supabase.from('dealer_master')
+      .select('id,dealer_name,dealer_code,grd_dealer_id')
+      .eq('id', raw)
+      .maybeSingle();
+    if (!local.error && local.data) return local.data;
+    throw grdErr;
+  }
 }
 
 export function mapGrdModels(data) {
