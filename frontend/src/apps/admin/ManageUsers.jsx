@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createUser, deleteUser, listUsers, updateUser } from './api';
+import { createUser, deleteUser, listUsers, updateUser, resetPassword } from './api';
 
 const emptyForm = { full_name: '', phone: '', password: '', role: 'field_executive', email: '' };
 
@@ -79,6 +79,17 @@ export default function ManageUsers() {
     }
   }
 
+  async function resetUserPassword(user) {
+    const next = window.prompt(`Set new password for ${user.full_name} (minimum 8 characters):`);
+    if (next === null) return;
+    if (next.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    const confirm = window.prompt('Re-enter the new password:');
+    if (confirm !== next) { setError('Passwords do not match.'); return; }
+    setError(''); setMessage('');
+    try { const data = await resetPassword({ id: user.id, table: 'users', new_password: next }); setMessage(data.message || 'Password reset successfully.'); }
+    catch (err) { setError(err.message); }
+  }
+
   async function remove(user) {
     if (!window.confirm(`Remove account "${user.full_name}"?`)) return;
     setError(''); setMessage('');
@@ -125,7 +136,7 @@ export default function ManageUsers() {
                   <td>{user.created_at ? user.created_at.slice(0, 10) : '—'}</td>
                   <td className="actions-cell">
                     <button className="admin-btn small secondary" onClick={() => beginEdit(user)}>Edit contact</button>
-                    {user.is_current ? <span className="you-tag">You</span> : <button className="admin-btn small danger" onClick={() => remove(user)}>Remove</button>}
+                    <button className="admin-btn small secondary" onClick={() => resetUserPassword(user)}>Reset Password</button>{user.is_current ? <span className="you-tag">You</span> : <button className="admin-btn small danger" onClick={() => remove(user)}>Remove</button>}
                   </td>
                 </tr>
               ))}

@@ -3,7 +3,7 @@ import RoleNavigation from '../../components/RoleNavigation';
 import CollectionActivity from '../../components/CollectionActivity';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearDealerToken, fetchLoanApplications, fetchDealerProfile } from './api';
+import { clearDealerToken, fetchLoanApplications, fetchDealerProfile, fetchAvailableLoans, fetchDeliveries, lockDelivery, createDealerSale } from './api';
 import { clearCurrentUser, getCurrentUser, setCurrentUser } from '../../utils/session';
 
 const STATUS_META = {
@@ -32,6 +32,11 @@ export default function DealerDashboard() {
   const [profile, setProfile] = useState(getCurrentUser() || {});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [availableLoans, setAvailableLoans] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
+  const [selectedLoan, setSelectedLoan] = useState('');
+  const [saleAmount, setSaleAmount] = useState('');
+  const [workflowBusy, setWorkflowBusy] = useState(false);
 
   function logout() {
     clearDealerToken();
@@ -41,12 +46,14 @@ export default function DealerDashboard() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([fetchLoanApplications(), fetchDealerProfile()])
-      .then(([apps, dealerProfile]) => {
+    Promise.all([fetchLoanApplications(), fetchDealerProfile(), fetchAvailableLoans(), fetchDeliveries()])
+      .then(([apps, dealerProfile, loans, deliveryRows]) => {
         if (!alive) return;
         setApplications(apps || []);
         setProfile(dealerProfile || {});
         setCurrentUser({ ...(getCurrentUser() || {}), ...(dealerProfile || {}), role: 'dealer' });
+        setAvailableLoans(loans || []);
+        setDeliveries(deliveryRows || []);
       })
       .catch((e) => alive && setError(e.message || 'Could not load dashboard'))
       .finally(() => alive && setLoading(false));
@@ -136,6 +143,20 @@ export default function DealerDashboard() {
             </table>
           </div>
         </section>
+      <section className="dealer-card" style={{marginTop:24}}>
+        <div className="dealer-card-head"><div><h2>Dealer Pending — Approved Loans</h2><p>Only unused approved/sanctioned/disbursed loans are shown.</p></div><span>{availableLoans.length} available</span></div>
+        {availableLoans.length===0 ? <div className="dealer-empty">No unused approved loans available.</div> : <div className="dealer-table-wrap"><table className="dealer-table"><thead><tr><th>Application</th><th>Customer</th><th>Vehicle</th><th>Loan</th><th>Action</th></tr></thead><tbody>
+          {availableLoans.map(l=><tr key={l.id}><td><strong>{l.application_no||l.id}</strong></td><td>{l.customer_name||'—'}<small>{l.customer_phone||''}</small></td><td>{l.vehicle_model||'—'}</td><td>{money(l.loan_amount_requested)}</td><td><button type="button" className="dealer-primary" disabled={workflowBusy} onClick={async()=>{setWorkflowBusy(true);setError('');try{const d=await lockDelivery({loan_application_id:l.id});setDeliveries(x=>[d,...x.filter(v=>v.loan_application_id!==l.id)]);setSelectedLoan(String(l.id));}catch(e){setError(e.message)}finally{setWorkflowBusy(false)}}}>Lock for Delivery</button></td></tr>)}
+        </tbody></table></div>}
+      </section>
+      <section className="dealer-card" style={{marginTop:24}}>
+        <div className="dealer-card-head"><div><h2>Create Sale</h2><p>Select a locked/approved loan. Once sale is completed, that loan becomes USED and leaves Dealer Pending.</p></div></div>
+        <div className="form-grid" style={{padding:20}}>
+          <label>Approved Loan<select value={selectedLoan} onChange={e=>setSelectedLoan(e.target.value)}><option value="">Select loan</option>{availableLoans.map(l=><option key={l.id} value={l.id}>{l.application_no||l.id} — {l.customer_name||''}</option>)}</select></label>
+          <label>Sale Amount<input type="number" value={saleAmount} onChange={e=>setSaleAmount(e.target.value)} placeholder="Enter sale amount"/></label>
+          <div><button type="button" className="dealer-primary" disabled={!selectedLoan||workflowBusy} onClick={async()=>{setWorkflowBusy(true);setError('');try{const d=deliveries.find(x=>String(x.loan_application_id)===String(selectedLoan));await createDealerSale({loan_application_id:Number(selectedLoan),delivery_id:d?.id||null,sale_amount:saleAmount||null});setAvailableLoans(x=>x.filter(l=>String(l.id)!==String(selectedLoan)));setSelectedLoan('');setSaleAmount('');}catch(e){setError(e.message)}finally{setWorkflowBusy(false)}}}>Complete Sale → Loan Used</button></div>
+        </div>
+      </section>
       <CollectionActivity compact />
     </main>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createStaff, deleteStaff, listStaff, updateStaffContact } from './api';
+import { createStaff, deleteStaff, listStaff, updateStaffContact, resetPassword } from './api';
 
 const emptyForm = { username: '', password: '', role: 'staff', contact_mobile: '', email: '' };
 
@@ -74,6 +74,17 @@ export default function ManageStaff() {
     }
   }
 
+  async function resetStaffPassword(user) {
+    const next = window.prompt(`Set new password for ${user.username} (minimum 8 characters):`);
+    if (next === null) return;
+    if (next.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    const confirm = window.prompt('Re-enter the new password:');
+    if (confirm !== next) { setError('Passwords do not match.'); return; }
+    setError(''); setMessage('');
+    try { const data = await resetPassword({ id: user.id, table: user.source === 'users' ? 'users' : 'staff_accounts', new_password: next }); setMessage(data.message || 'Password reset successfully.'); }
+    catch (err) { setError(err.message); }
+  }
+
   async function remove(user) {
     if (!window.confirm(`Remove account "${user.username}"?`)) return;
     setError(''); setMessage('');
@@ -120,7 +131,7 @@ export default function ManageStaff() {
                   <td>{user.created_at ? String(user.created_at).slice(0, 10) : '—'}</td>
                   <td className="actions-cell">
                     <button className="admin-btn small secondary" onClick={() => beginEdit(user)}>Edit contact</button>
-                    {user.is_current ? <span className="you-tag">You</span> : <button className="admin-btn small danger" onClick={() => remove(user)}>Remove</button>}
+                    <button className="admin-btn small secondary" onClick={() => resetStaffPassword(user)}>Reset Password</button>{user.is_current ? <span className="you-tag">You</span> : <button className="admin-btn small danger" onClick={() => remove(user)}>Remove</button>}
                   </td>
                 </tr>
               ))}

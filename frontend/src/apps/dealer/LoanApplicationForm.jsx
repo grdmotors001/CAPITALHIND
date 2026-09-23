@@ -12,6 +12,70 @@ import StepReview from './components/StepReview';
 const STEPS = ['Customer', 'Vehicle & loan', 'KYC', 'Guarantor', 'Review'];
 const REQUIRED_DOCS = ['pan', 'aadhaar_front', 'aadhaar_back', 'photo', 'address_proof'];
 
+// TEMP DEMO DATA: pre-fills the dealer loan form for testing.
+// Remove this block when testing with real customer data.
+function createDemoData() {
+  const stamp = String(Date.now());
+  const phone = ('9' + stamp.slice(-9));
+  const aadhaar = ('000' + stamp.slice(-9)).slice(-12);
+  const pan = `TESTX${stamp.slice(-4)}Z`;
+  const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  let demoFiles = {};
+  if (typeof File !== 'undefined' && typeof atob !== 'undefined') {
+    const bytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
+    const names = {
+      pan: 'DEMO-PAN.png',
+      aadhaar_front: 'DEMO-AADHAAR-FRONT.png',
+      aadhaar_back: 'DEMO-AADHAAR-BACK.png',
+      photo: 'DEMO-PHOTO.png',
+      address_proof: 'DEMO-ADDRESS-PROOF.png',
+    };
+    demoFiles = Object.fromEntries(
+      Object.entries(names).map(([type, name]) => [
+        type,
+        { file_name: name, file: new File([bytes], name, { type: 'image/png' }) },
+      ])
+    );
+  }
+
+  return {
+    customer: {
+      full_name: 'DEMO TEST CUSTOMER',
+      phone,
+      email: 'demo@example.test',
+      dob: '1995-01-15',
+      gender: 'male',
+      pan,
+      aadhaar,
+      occupation: 'Demo Customer',
+      monthly_income: '30000',
+      pincode: '201001',
+      city: 'Ghaziabad',
+      state: 'Uttar Pradesh',
+      address: 'DEMO TEST ADDRESS - REMOVE BEFORE LIVE USE',
+    },
+    vehicleLoan: {
+      vehicle_model_id: '1',
+      vehicle_price: '95000',
+      down_payment: '15000',
+      loan_amount_requested: 80000,
+      tenure_months: '36',
+      physical_register_serial_no: 'DEMO-REG-001',
+    },
+    kyc: { documents: demoFiles },
+    guarantorData: {
+      guarantors: [{
+        full_name: 'DEMO TEST GUARANTOR',
+        relation_with_customer: 'Father',
+        phone: '8888888888',
+        address: 'DEMO GUARANTOR ADDRESS',
+        pan: 'TESTG1234Z',
+        aadhaar_masked: '000000000000',
+      }],
+    },
+  };
+}
+
 function validateCustomer(c) {
   const errors = {};
   if (!c.full_name) errors.full_name = 'Naam bharein';
@@ -64,10 +128,11 @@ export default function LoanApplicationForm() {
   const [submitted, setSubmitted] = useState(null);
   const [submitError, setSubmitError] = useState(null);
 
-  const [customer, setCustomer] = useState({});
-  const [vehicleLoan, setVehicleLoan] = useState({});
-  const [kyc, setKyc] = useState({});
-  const [guarantorData, setGuarantorData] = useState({ guarantors: [] });
+  // Live form starts empty. Demo/test data must never be submitted accidentally.
+  const [customer, setCustomer] = useState({ full_name:'', phone:'', email:'', dob:'', gender:'', pan:'', aadhaar:'', occupation:'', monthly_income:'', pincode:'', city:'', state:'', address:'' });
+  const [vehicleLoan, setVehicleLoan] = useState({ vehicle_model_id:'', vehicle_price:'', down_payment:'', loan_amount_requested:'', tenure_months:'', physical_register_serial_no:'' });
+  const [kyc, setKyc] = useState({ documents:{} });
+  const [guarantorData, setGuarantorData] = useState({ guarantors:[{ full_name:'', relation_with_customer:'', phone:'', address:'', pan:'', aadhaar_masked:'' }] });
   const [errors, setErrors] = useState({});
 
   function validateCurrentStep() {

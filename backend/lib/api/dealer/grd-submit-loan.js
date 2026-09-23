@@ -4,7 +4,7 @@
 
 import { getSupabase } from '../_lib/supabase.js';
 import { sendError, methodGuard } from '../_lib/auth.js';
-import { generateApplicationNo } from '../_lib/validate.js';
+import bcrypt from 'bcryptjs';
 
 function maskAadhaar(value) {
   const s = String(value || '').replace(/\D/g, '');
@@ -21,32 +21,76 @@ function text(value) {
   return s || null;
 }
 
+function digits(value) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
 async function findVehicleModel(supabase, vehicleLoan) {
-  const rawId = vehicleLoan.vehicle_model_id ?? vehicleLoan.model_id;
-  if (rawId && /^\d+$/.test(String(rawId))) {
-    const { data, error } = await supabase
-      .from('vehicle_model_master')
-      .select('id, model_name')
-      .eq('id', Number(rawId))
-      .maybeSingle();
-    if (error) throw error;
-    if (data) return data;
+  const grdModelId = Number(vehicleLoan.grd_model_id);
+  const grdModelCode = text(vehicleLoan.grd_model_code);
+  const modelName = text(vehicleLoan.grd_model_name);
+
+  if (!Number.isFinite(grdModelId) || grdModelId <= 0 || !modelName) {
+    return null;
   }
 
-  const name = text(
-    vehicleLoan.vehicle_model ??
-    vehicleLoan.model ??
-    vehicleLoan.vehicle_model_name
-  );
-  if (!name) return null;
-
-  const { data, error } = await supabase
+  // GRD is the source of truth. The immutable GRD Product ID is the
+  // primary identity; CHFPL never selects a model by name alone.
+  const { data: existing, error: lookupErr } = await supabase
     .from('vehicle_model_master')
-    .select('id, model_name')
-    .ilike('model_name', name)
+    .select('id, model_name, grd_model_id, grd_model_code')
+    .eq('grd_model_id', grdModelId)
     .maybeSingle();
-  if (error) throw error;
-  return data || null;
+  if (lookupErr) throw lookupErr;
+
+  if (existing) {
+    const { data: updated, error: updateErr } = await supabase
+      .from('vehicle_model_master')
+      .update({ grd_model_code: grdModelCode, model_name: modelName })
+      .eq('id', existing.id)
+      .select('id, model_name, grd_model_id, grd_model_code')
+      .single();
+    if (updateErr) throw updateErr;
+    return updated;
+  }
+
+  // During migration, link an existing legacy row by the exact GRD model
+  // code. We do not use name-only matching because names are not unique IDs.
+  if (grdModelCode) {
+    const { data: byCode, error: codeErr } = await supabase
+      .from('vehicle_model_master')
+      .select('id, model_name, grd_model_id, grd_model_code')
+      .eq('grd_model_code', grdModelCode)
+      .maybeSingle();
+    if (codeErr) throw codeErr;
+
+    if (byCode) {
+      const { data: linked, error: linkErr } = await supabase
+        .from('vehicle_model_master')
+        .update({ grd_model_id: grdModelId, model_name: modelName })
+        .eq('id', byCode.id)
+        .select('id, model_name, grd_model_id, grd_model_code')
+        .single();
+      if (linkErr) throw linkErr;
+      return linked;
+    }
+  }
+
+  // New model: create the CHFPL mirror. The UNIQUE GRD model ID constraint
+  // prevents duplicate mirrors on concurrent submissions.
+  const { data: created, error: createErr } = await supabase
+    .from('vehicle_model_master')
+    .upsert({
+      grd_model_id: grdModelId,
+      grd_model_code: grdModelCode,
+      model_name: modelName,
+      vehicle_type: text(vehicleLoan.vehicle_type) || '3W',
+      ex_showroom_price: num(vehicleLoan.vehicle_price)
+    }, { onConflict: 'grd_model_id' })
+    .select('id, model_name, grd_model_id, grd_model_code')
+    .single();
+  if (createErr) throw createErr;
+  return created;
 }
 
 export default async function handler(req, res) {
@@ -73,55 +117,130 @@ export default async function handler(req, res) {
     return sendError(res, 422, '12-digit Aadhaar is required');
   }
 
-  if (!dealerInfo.code && !dealerInfo.login_id) {
-    return sendError(res, 422, 'Dealer identification is required');
+  if (!dealerInfo.grd_dealer_id || (!dealerInfo.code && !dealerInfo.login_id)) {
+    return sendError(res, 422, 'GRD dealer identification is required');
   }
 
   const supabase = getSupabase();
 
   try {
-    // Resolve the dealer and dealer user from the identifiers sent by GRD.
-    let dealerQuery = supabase
+    // GRD is the source of truth for dealer identity. The immutable GRD
+    // dealer ID is the primary identity used to mirror the dealer into CHFPL.
+    const grdDealerId = Number(dealerInfo.grd_dealer_id);
+    const dealerCode = text(dealerInfo.code) || text(dealerInfo.login_id);
+    const dealerName = text(dealerInfo.name) || dealerCode || 'GRD Dealer';
+    const dealerMobile = text(dealerInfo.mobile);
+    const dealerLoginId = text(dealerInfo.login_id);
+
+    if (!Number.isInteger(grdDealerId) || grdDealerId <= 0) {
+      return sendError(res, 422, 'GRD dealer ID is required');
+    }
+    if (!dealerCode) {
+      return sendError(res, 422, 'GRD dealer code/login ID is required');
+    }
+
+    let dealer = null;
+
+    // First resolve by the immutable GRD ID.
+    const { data: byGrdId, error: grdDealerLookupErr } = await supabase
       .from('dealer_master')
-      .select('id, dealer_name, dealer_code')
-      .limit(1);
+      .select('id, dealer_name, dealer_code, grd_dealer_id')
+      .eq('grd_dealer_id', grdDealerId)
+      .maybeSingle();
+    if (grdDealerLookupErr) throw grdDealerLookupErr;
+    dealer = byGrdId;
 
-    if (dealerInfo.code) {
-      dealerQuery = dealerQuery.eq('dealer_code', String(dealerInfo.code).trim());
-    } else {
-      return sendError(res, 422, 'Dealer code is required');
-    }
-
-    const { data: dealer, error: dealerErr } = await dealerQuery.maybeSingle();
-    if (dealerErr) throw dealerErr;
-    if (!dealer) return sendError(res, 404, 'CHFPL dealer not found');
-
-    const loginId = text(dealerInfo.login_id);
-    let dealerUser = null;
-    if (loginId) {
-      const { data, error } = await supabase
-        .from('dealer_users')
-        .select('id, dealer_id, full_name, phone, is_active')
-        .eq('dealer_id', dealer.id)
-        .eq('phone', loginId)
+    // During migration, link an existing legacy row by the exact GRD dealer
+    // code. Name/mobile are not used as identity keys.
+    if (!dealer) {
+      const { data: byCode, error: codeErr } = await supabase
+        .from('dealer_master')
+        .select('id, dealer_name, dealer_code, grd_dealer_id')
+        .eq('dealer_code', dealerCode)
         .maybeSingle();
-      if (error) throw error;
-      dealerUser = data;
+      if (codeErr) throw codeErr;
+      dealer = byCode;
+      if (dealer) {
+        const { data: linked, error: linkErr } = await supabase
+          .from('dealer_master')
+          .update({ grd_dealer_id: grdDealerId, dealer_name: dealerName })
+          .eq('id', dealer.id)
+          .select('id, dealer_name, dealer_code, grd_dealer_id')
+          .single();
+        if (linkErr) throw linkErr;
+        dealer = linked;
+      }
     }
 
-    if (!dealerUser && dealerInfo.mobile) {
-      const { data, error } = await supabase
+    // New GRD dealer: the database UNIQUE constraint on grd_dealer_id prevents
+    // duplicate mirrors when concurrent submissions use the same dealer.
+    if (!dealer) {
+      const { data: createdDealer, error: dealerCreateErr } = await supabase
+        .from('dealer_master')
+        .upsert({
+          grd_dealer_id: grdDealerId,
+          dealer_code: dealerCode,
+          dealer_name: dealerName
+        }, { onConflict: 'grd_dealer_id' })
+        .select('id, dealer_name, dealer_code, grd_dealer_id')
+        .single();
+      if (dealerCreateErr) throw dealerCreateErr;
+      dealer = createdDealer;
+    } else if (dealerName && dealer.dealer_name !== dealerName) {
+      const { data: updatedDealer, error: dealerUpdateErr } = await supabase
+        .from('dealer_master')
+        .update({ dealer_name: dealerName })
+        .eq('id', dealer.id)
+        .select('id, dealer_name, dealer_code, grd_dealer_id')
+        .single();
+      if (dealerUpdateErr) throw dealerUpdateErr;
+      dealer = updatedDealer;
+    }
+
+    // A bridge submission also bootstraps the matching CHFPL dealer user.
+    // The user is created inactive only if no usable phone/login identity is
+    // supplied; otherwise it is active and can own the submitted application.
+    const dealerUserPhone = dealerMobile || dealerLoginId || dealerCode;
+    if (!dealerUserPhone) {
+      return sendError(res, 422, 'Dealer mobile/login identity is required');
+    }
+
+    const { data: existingDealerUser, error: dealerUserLookupErr } = await supabase
+      .from('dealer_users')
+      .select('id, dealer_id, full_name, phone, is_active')
+      .eq('dealer_id', dealer.id)
+      .maybeSingle();
+    if (dealerUserLookupErr) throw dealerUserLookupErr;
+
+    let dealerUser = existingDealerUser;
+    if (!dealerUser) {
+      const passwordHash = await bcrypt.hash(
+        `GRD-BRIDGE-${dealerCode}-${process.env.CHFPL_GRD_BRIDGE_SECRET || 'bridge'}`,
+        10
+      );
+      const { data: createdDealerUser, error: dealerUserCreateErr } = await supabase
         .from('dealer_users')
+        .insert({
+          dealer_id: dealer.id,
+          full_name: dealerName,
+          phone: dealerUserPhone,
+          password_hash: passwordHash,
+          role: 'dealer',
+          is_active: true
+        })
         .select('id, dealer_id, full_name, phone, is_active')
-        .eq('dealer_id', dealer.id)
-        .eq('phone', String(dealerInfo.mobile).trim())
-        .maybeSingle();
-      if (error) throw error;
-      dealerUser = data;
-    }
-
-    if (!dealerUser || !dealerUser.is_active) {
-      return sendError(res, 422, 'Active CHFPL dealer user could not be resolved');
+        .single();
+      if (dealerUserCreateErr) throw dealerUserCreateErr;
+      dealerUser = createdDealerUser;
+    } else if (!dealerUser.is_active) {
+      const { data: activatedDealerUser, error: activateErr } = await supabase
+        .from('dealer_users')
+        .update({ is_active: true, full_name: dealerName })
+        .eq('id', dealerUser.id)
+        .select('id, dealer_id, full_name, phone, is_active')
+        .single();
+      if (activateErr) throw activateErr;
+      dealerUser = activatedDealerUser;
     }
 
     const vehicleModel = await findVehicleModel(supabase, vehicleLoan);
@@ -151,7 +270,9 @@ export default async function handler(req, res) {
       .single();
     if (customerErr) throw customerErr;
 
-    const applicationNo = await generateApplicationNo(supabase);
+    const { data: applicationNo, error: applicationNoErr } = await supabase
+      .rpc('next_chf_application_no');
+    if (applicationNoErr) throw applicationNoErr;
 
     const { data: application, error: applicationErr } = await supabase
       .from('loan_applications')

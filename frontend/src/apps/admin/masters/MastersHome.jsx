@@ -17,16 +17,6 @@ export default function MastersHome() {
           <div><h3>HP (Hypothecation)</h3><p>Manage the entities under which vehicle RC hypothecation is registered.</p></div>
           <b>→</b>
         </Link>
-        <Link to="vehicle-models" className="admin-home-card">
-          <span>🏍</span>
-          <div><h3>Vehicle Model</h3><p>Manage OEMs, vehicle models, ex-showroom price and battery capacity.</p></div>
-          <b>→</b>
-        </Link>
-        <Link to="loan-types" className="admin-home-card">
-          <span>₹</span>
-          <div><h3>Loan Type</h3><p>Manage the loan types dealers and staff can select on an application.</p></div>
-          <b>→</b>
-        </Link>
         <Link to="batteries" className="admin-home-card">
           <span>🔋</span>
           <div><h3>Battery Master</h3><p>Manage battery names used in Field Executive Vehicle Repo records.</p></div>

@@ -18,8 +18,8 @@ export default async function handler(req, res) {
     const { data, error } = await supabase
       .from('loan_applications')
       .select(`
-        id, application_no, application_status, tvr_status, physical_register_serial_no, cibil_score, cibil_checked_at, loan_amount_requested,
-        tenure_months, submitted_at, assigned_fe_id, assigned_at, approved_at, approval_valid_until,
+        id, application_no, application_status, physical_register_serial_no, cibil_score, cibil_checked_at, loan_amount_requested,
+        tenure_months, submitted_at, assigned_fe_id, assigned_at,
         dealer_master ( dealer_name ),
         customer_profiles ( full_name, phone ),
         vehicle_model_master ( model_name ),
@@ -49,9 +49,6 @@ export default async function handler(req, res) {
         id: row.id,
         application_no: row.application_no,
         application_status: row.application_status,
-        tvr_status: row.tvr_status || 'pending',
-        approved_at: row.approved_at,
-        approval_valid_until: row.approval_valid_until,
         physical_register_serial_no: row.physical_register_serial_no,
         cibil_score: row.cibil_score,
         cibil_checked_at: row.cibil_checked_at,

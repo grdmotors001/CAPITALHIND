@@ -2,6 +2,8 @@
 import route_add_receipt_0 from '../lib/api/admin/add-receipt.js';
 import route_assign_fe_1 from '../lib/api/admin/assign-fe.js';
 import route_create_loan_2 from '../lib/api/admin/create-loan.js';
+import route_create_manual_loan_2b from '../lib/api/admin/create-manual-loan.js';
+import route_create_grd_test_approved_2c from '../lib/api/admin/create-grd-test-approved.js';
 import route_create_user_3 from '../lib/api/admin/create-user.js';
 import route_dashboard_stats_4 from '../lib/api/admin/dashboard-stats.js';
 import route_dealers_5 from '../lib/api/admin/dealers.js';
@@ -59,6 +61,8 @@ const routes = {
   '/add-receipt': route_add_receipt_0,
   '/assign-fe': route_assign_fe_1,
   '/create-loan': route_create_loan_2,
+  '/create-manual-loan': route_create_manual_loan_2b,
+  '/create-grd-test-approved': route_create_grd_test_approved_2c,
   '/create-user': route_create_user_3,
   '/dashboard-stats': route_dashboard_stats_4,
   '/dealers': route_dealers_5,
