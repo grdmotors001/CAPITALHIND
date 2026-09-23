@@ -141,6 +141,10 @@ export function createManualLoan(payload) {
   return usersRequest('create-manual-loan', { method: 'POST', body: payload });
 }
 
+export function createGrdTestApproved() {
+  return usersRequest('create-grd-test-approved', { method: 'POST' });
+}
+
 export function getDashboardStats() { return usersRequest('dashboard-stats'); }
 export function addReceipt(payload) { return usersRequest('add-receipt', { method: 'POST', body: payload }); }
 export function listReceiptLoans() { return usersRequest('receipt-loans'); }
