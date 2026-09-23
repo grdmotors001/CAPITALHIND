@@ -33,7 +33,10 @@ export default function RepoCases(){
        const next={...row,...patch};
        if(Object.prototype.hasOwnProperty.call(patch,'parked_dealer_id')){
          const selected=dealers.find(v=>String(v.id)===String(patch.parked_dealer_id||''));
-         next.dealer_master=selected?{
+         next.dealer_master=patch.parked_dealer_id==='factory'?{
+           dealer_name:'GRD Factory',
+           dealer_code:'GRD-FACTORY'
+         }:selected?{
            dealer_name:selected.dealer_name||'',
            dealer_code:selected.dealer_code||''
          }:null;
