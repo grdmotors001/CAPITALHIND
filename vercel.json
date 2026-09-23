@@ -1,76 +1,97 @@
 {
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/grd/:path*",
-      "destination": "/api/grd?path=:path*"
+      "src": "backend/api/**/*.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
+      }
     },
     {
-      "source": "/api/admin/:path*",
-      "destination": "/api/admin?path=:path*"
-    },
-    {
-      "source": "/api/collection/:path*",
-      "destination": "/api/collection?path=:path*"
-    },
-    {
-      "source": "/api/customer/:path*",
-      "destination": "/api/customer?path=:path*"
-    },
-    {
-      "source": "/api/dealer/:path((?!grd-submit-loan).*)",
-      "destination": "/api/dealer?path=:path"
-    },
-    {
-      "source": "/api/do/:path*",
-      "destination": "/api/do?path=:path*"
-    },
-    {
-      "source": "/api/field-executive/:path*",
-      "destination": "/api/field-executive?path=:path*"
-    },
-    {
-      "source": "/api/team-leader/:path*",
-      "destination": "/api/team-leader?path=:path*"
-    },
-    {
-      "source": "/api/tele-caller/:path*",
-      "destination": "/api/tele-caller?path=:path*"
-    },
-    {
-      "source": "/api/users/:path*",
-      "destination": "/api/users?path=:path*"
-    },
-    {
-      "source": "/api/staff/:path*",
-      "destination": "/api/staff?path=:path*"
-    },
-    {
-      "source": "/admin/react-login.php",
-      "destination": "/api/admin?path=login"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
-  "headers": [
+  "routes": [
     {
-      "source": "/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
+      "src": "/api/grd-submit-loan",
+      "dest": "/backend/api/grd-submit-loan.js"
     },
     {
-      "source": "/index.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
+      "src": "/api/dealer/grd-submit-loan",
+      "dest": "/backend/api/dealer.js?path=grd-submit-loan"
+    },
+    {
+      "src": "/api/admin/react-login\\.php",
+      "dest": "/backend/api/admin.js?path=react-login.php"
+    },
+    {
+      "src": "/api/admin/(.*)",
+      "dest": "/backend/api/admin.js?path=$1"
+    },
+    {
+      "src": "/api/collection/(.*)",
+      "dest": "/backend/api/collection.js?path=$1"
+    },
+    {
+      "src": "/api/customer/(.*)",
+      "dest": "/backend/api/customer.js?path=$1"
+    },
+    {
+      "src": "/api/dealer/(.*)",
+      "dest": "/backend/api/dealer.js?path=$1"
+    },
+    {
+      "src": "/api/do/(.*)",
+      "dest": "/backend/api/do.js?path=$1"
+    },
+    {
+      "src": "/api/field-executive/(.*)",
+      "dest": "/backend/api/field-executive.js?path=$1"
+    },
+    {
+      "src": "/api/team-leader/(.*)",
+      "dest": "/backend/api/team-leader.js?path=$1"
+    },
+    {
+      "src": "/api/tele-caller/(.*)",
+      "dest": "/backend/api/tele-caller.js?path=$1"
+    },
+    {
+      "src": "/api/users/(.*)",
+      "dest": "/backend/api/users.js?path=$1"
+    },
+    {
+      "src": "/api/staff/(.*)",
+      "dest": "/backend/api/staff.js?path=$1"
+    },
+    {
+      "src": "/api/workflow/available-loans",
+      "dest": "/backend/api/workflow/available-loans.js"
+    },
+    {
+      "src": "/api/workflow/deliveries",
+      "dest": "/backend/api/workflow/deliveries.js"
+    },
+    {
+      "src": "/api/workflow/sales",
+      "dest": "/backend/api/workflow/sales.js"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|json|txt|map|webmanifest))",
+      "dest": "/frontend/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/index.html"
     }
   ]
 }
