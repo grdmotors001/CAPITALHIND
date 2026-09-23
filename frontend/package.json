@@ -7,11 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "seed:dealer": "node scripts/seed-dealer-user.js",
-    "seed:admin": "node scripts/seed-admin-user.js",
-    "test:admin-login": "node --experimental-test-module-mocks --test tests/admin-login.test.js",
-    "test:export-cibil": "node --experimental-test-module-mocks --test tests/admin-export-cibil.test.js",
-    "test": "node --experimental-test-module-mocks --test tests/*.test.js"
+    "seed:dealer": "node ../backend/scripts/seed-dealer-user.js",
+    "seed:admin": "node ../backend/scripts/seed-admin-user.js",
+    "test:admin-login": "node --experimental-test-module-mocks --test ../backend/tests/admin-login.test.js",
+    "test:export-cibil": "node --experimental-test-module-mocks --test ../backend/tests/admin-export-cibil.test.js",
+    "test": "node --experimental-test-module-mocks --test ../backend/tests/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
