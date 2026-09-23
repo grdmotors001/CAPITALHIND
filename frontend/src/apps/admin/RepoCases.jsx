@@ -11,6 +11,7 @@ export default function RepoCases(){
    const parked=row.dealer_master||{};
    return dealers.find(d=>
      String(d.id)===String(row.parked_dealer_id||'') ||
+     String(d.grd_dealer_id||'')===String(parked.grd_dealer_id||'') ||
      (norm(d.dealer_name) && norm(d.dealer_name)===norm(parked.dealer_name)) ||
      (norm(d.dealer_code) && norm(d.dealer_code)===norm(parked.dealer_code))
    )||null;
@@ -84,6 +85,7 @@ export default function RepoCases(){
     <tbody>
      {loading?<tr><td colSpan="12" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
+       const isFactory=norm(r.dealer_master?.dealer_code)==='grd-factory';
        return <tr key={r.id}>
         <td>{fmt(r.repo_date)}<div className="muted">{String(r.repo_time||'').slice(0,5)}</div></td>
         <td><strong>{r.loan_applications?.loan_account_no||r.loan_applications?.application_no||'—'}</strong><div className="muted">{r.loan_applications?.application_no||''}</div></td>
@@ -98,12 +100,12 @@ export default function RepoCases(){
         <td>{r.charger_available?'Yes':'No'}</td>
         <td>
          <select
-          value={selectedDealer?.id||''}
-          onChange={e=>updateRepo(r.id,{parked_dealer_id:e.target.value||null})}
+          value={selectedDealer?.id|| (isFactory?'factory':'')}
+          onChange={e=>updateRepo(r.id,{parked_dealer_id:e.target.value||'factory'})}
           title="Change parked dealer"
           style={{minWidth:170}}
          >
-          <option value="">GRD Factory</option>
+          <option value="factory">GRD Factory</option>
           {dealers.map(d=><option key={d.id} value={d.id}>{d.dealer_name||'Unnamed Dealer'}</option>)}
          </select>
         </td>
