@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addReceipt, createLoan, createManualLoan, listApprovedLoans, listDealers, listVehicleModelsAdmin, listHP, listLoanTypes } from './api';
+import { addReceipt, createLoan, createManualLoan, createGrdTestApproved, listApprovedLoans, listDealers, listVehicleModelsAdmin, listHP, listLoanTypes } from './api';
 
 function money(value) {
   const n = Number(value || 0);
@@ -43,6 +43,9 @@ export default function CreateLoan() {
   const [manualSaving, setManualSaving] = useState(false);
   const [manualMessage, setManualMessage] = useState('');
   const [manualError, setManualError] = useState('');
+  const [grdTestSaving, setGrdTestSaving] = useState(false);
+  const [grdTestMessage, setGrdTestMessage] = useState('');
+  const [grdTestError, setGrdTestError] = useState('');
   const [manual, setManual] = useState({ dealer_code:'', customer_name:'', customer_phone:'', customer_dob:'', customer_pan:'', customer_aadhaar:'', customer_address:'', customer_city:'', customer_state:'', customer_pincode:'', vehicle_model:'', vehicle_price:'', down_payment:'', loan_amount:'', tenure_months:'', loan_type:'', hypothecation:'', vehicle_no:'', chassis_no:'', disbursement_date:'', disbursed_amount:'', loan_account_no:'' });
   const [selectedId, setSelectedId] = useState('');
   const [accountNo, setAccountNo] = useState('');
@@ -120,6 +123,20 @@ export default function CreateLoan() {
       </div>
 
       {message && <div className="admin-alert success">✓ {message}</div>}
+      {grdTestMessage && <div className="admin-alert success">✓ {grdTestMessage}</div>}
+      {grdTestError && <div className="admin-alert error">⚠ {grdTestError}</div>}
+      <section className="admin-card staff-list-card" style={{ marginBottom: 20 }}>
+        <div className="admin-card-title">
+          <div><h2>GRD Integration Test</h2><span>Temporary approved application banayein, taaki GRD → Approved → Dealer Pending flow check ho sake.</span></div>
+          <button className="admin-btn" disabled={grdTestSaving} onClick={async () => {
+            setGrdTestSaving(true); setGrdTestMessage(''); setGrdTestError('');
+            try { const d = await createGrdTestApproved(); setGrdTestMessage(d.message || 'GRD test approved application created.'); await load(); }
+            catch (e) { setGrdTestError(e.message || 'GRD test application create failed.'); }
+            finally { setGrdTestSaving(false); }
+          }}>{grdTestSaving ? 'Creating…' : '✓ Create GRD Test Approved'}</button>
+        </div>
+      </section>
+
       <section className="admin-card staff-list-card" style={{ marginBottom: 20 }}>
         <div className="admin-card-title"><div><h2>Manual Create Loan</h2><span>Admin dealer dropdown se select karke direct loan create karein.</span></div><button type="button" className="admin-btn secondary" onClick={() => setManualOpen(v=>!v)}>{manualOpen ? "Hide" : "Open"}</button></div>
         {manualOpen && <form className="staff-form" onSubmit={async (e) => {
