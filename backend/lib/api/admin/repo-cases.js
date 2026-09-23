@@ -1,6 +1,9 @@
 // GET /api/admin/repo-cases — vehicle repossession register with search/filter.
 import { getSupabase } from '../_lib/supabase.js';
-import { requireAdminAuth, sendError, methodGuard } from '../_lib/auth.js';
+import { requireAdminAuth, sendError } from '../_lib/auth.js';
+import { fetchGrdMasters } from '../_lib/grd.js';
+
+const norm = (v) => String(v || '').trim().toLowerCase();
 
 export default async function handler(req,res){
   if(!['GET','POST'].includes(req.method)){
@@ -22,30 +25,87 @@ export default async function handler(req,res){
         if(!allowed.includes(status)) return sendError(res,400,'Invalid resale status.');
         patch.resale_status=status;
       }
+
       if(req.body && Object.prototype.hasOwnProperty.call(req.body,'parked_dealer_id')){
         const raw=req.body.parked_dealer_id;
         const dealerId=raw===null || raw==='' ? null : String(raw).trim();
-        if(dealerId){
-          const {data:dealer,error:dealerError}=await s.from('dealer_master').select('id').eq('id',dealerId).maybeSingle();
-          if(dealerError) return sendError(res,500,'Could not validate dealer.');
-          if(!dealer) return sendError(res,404,'Dealer not found.');
-          patch.parked_dealer_id=dealerId;
-        }else{
+
+        if(!dealerId){
           patch.parked_dealer_id=null;
+        }else{
+          // Dealer master is owned by GRD. Prefer the CHFPL dealer_master row
+          // when one exists, but never reject a valid GRD dealer just because
+          // its GRD id is different from the legacy CHFPL id.
+          let resolvedId=null;
+
+          const {data:localById,error:localIdError}=await s
+            .from('dealer_master')
+            .select('id,dealer_name,dealer_code')
+            .eq('id',dealerId)
+            .maybeSingle();
+          if(localIdError) return sendError(res,500,'Could not validate dealer.');
+
+          if(localById){
+            resolvedId=localById.id;
+          }else{
+            const masters=await fetchGrdMasters();
+            const grdDealer=(masters.dealers||[]).find(d=>String(d.id)===dealerId);
+
+            if(!grdDealer){
+              return sendError(res,404,'Dealer not found in GRD dealer master.');
+            }
+
+            const code=String(grdDealer.code||'').trim();
+            const name=String(grdDealer.name||'').trim();
+
+            if(code){
+              const {data:localByCode,error:codeError}=await s
+                .from('dealer_master')
+                .select('id,dealer_name,dealer_code')
+                .ilike('dealer_code',code)
+                .limit(1)
+                .maybeSingle();
+              if(codeError) return sendError(res,500,'Could not map dealer master.');
+              if(localByCode) resolvedId=localByCode.id;
+            }
+
+            if(!resolvedId && name){
+              const {data:localByName,error:nameError}=await s
+                .from('dealer_master')
+                .select('id,dealer_name,dealer_code')
+                .ilike('dealer_name',name)
+                .limit(1)
+                .maybeSingle();
+              if(nameError) return sendError(res,500,'Could not map dealer master.');
+              if(localByName) resolvedId=localByName.id;
+            }
+
+            // If CHFPL has no legacy dealer row, keep the GRD dealer id.
+            // This is the current cross-system dealer identity.
+            resolvedId=resolvedId||dealerId;
+          }
+
+          patch.parked_dealer_id=resolvedId;
         }
       }
+
       if(!Object.keys(patch).length) return sendError(res,400,'No Repo changes supplied.');
 
       const {data,error}=await s.from('vehicle_repossessions')
         .update(patch).eq('id',id)
         .select('id,resale_status,parked_dealer_id')
         .single();
+
       if(error){
-        console.error('[admin/repo-cases POST]',error.message);
+        console.error('[admin/repo-cases POST]',error.message,error.code||'');
+        if(error.code==='23503'){
+          return sendError(res,409,'Dealer is not available in CHFPL dealer master. Please sync this dealer from GRD first.');
+        }
         return sendError(res,500,'Could not update Repo record.');
       }
       return res.status(200).json({success:true,repo:data});
     }
+
     const {data,error}=await s.from('vehicle_repossessions').select(`
       id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
@@ -53,10 +113,22 @@ export default async function handler(req,res){
       loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone)),
       battery_master(battery_name), dealer_master(dealer_name,dealer_code)
     `).order('repo_date',{ascending:false}).order('repo_time',{ascending:false}).limit(500);
+
     if(error){console.error('[admin/repo-cases]',error.message);return sendError(res,500,'Could not load Repo register.');}
+
     const feIds=[...new Set((data||[]).map(r=>r.seized_by_fe_id).filter(Boolean))];
     let feMap={};
-    if(feIds.length){const {data:fe}=await s.from('users').select('id,full_name,phone').in('id',feIds);feMap=Object.fromEntries((fe||[]).map(u=>[u.id,u]));}
-    return res.status(200).json({success:true,repossessions:(data||[]).map(r=>({...r,field_executive:feMap[r.seized_by_fe_id]||null}))});
-  }catch(e){console.error('[admin/repo-cases] unhandled',e);return sendError(res,500,'Could not load Repo register.');}
+    if(feIds.length){
+      const {data:fe}=await s.from('users').select('id,full_name,phone').in('id',feIds);
+      feMap=Object.fromEntries((fe||[]).map(u=>[u.id,u]));
+    }
+
+    return res.status(200).json({
+      success:true,
+      repossessions:(data||[]).map(r=>({...r,field_executive:feMap[r.seized_by_fe_id]||null}))
+    });
+  }catch(e){
+    console.error('[admin/repo-cases] unhandled',e);
+    return sendError(res,500,e.message||'Could not load Repo register.');
+  }
 }
