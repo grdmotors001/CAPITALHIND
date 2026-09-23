@@ -11,8 +11,6 @@ import AssignApplications from './AssignApplications';
 import CreateLoan from './CreateLoan';
 import MastersHome from './masters/MastersHome';
 import ManageHP from './masters/ManageHP';
-import ManageVehicleModels from './masters/ManageVehicleModels';
-import ManageLoanTypes from './masters/ManageLoanTypes';
 import ManageOEM from './masters/ManageOEM';
 import ManageBatteries from './masters/ManageBatteries';
 import Receipts from './Receipts';
@@ -23,6 +21,8 @@ import RepoCases from './RepoCases';
 import Reports from './Reports';
 import AdminTools from './AdminTools';
 import CollectionRisk from './CollectionRisk';
+import ManualCreateLoan from './ManualCreateLoan';
+import LoanApplications from './LoanApplications';
 
 export default function AdminDashboard() {
   const location = useLocation();
@@ -63,10 +63,12 @@ export default function AdminDashboard() {
           <Link className={location.pathname.startsWith('/app/admin/accounts') ? 'active' : ''} to="/app/admin/accounts">♟ <span>Manage Accounts</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/assign') ? 'active' : ''} to="/app/admin/assign">➤ <span>Assign Applications</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/create-loan') ? 'active' : ''} to="/app/admin/create-loan">▣ <span>Create Loan</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/manual-create-loan') ? 'active' : ''} to="/app/admin/manual-create-loan">✚ <span>Manual Create Loan</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/payment-vouchers') ? 'active' : ''} to="/app/admin/payment-vouchers">₹ <span>Payment Vouchers</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/receipts') ? 'active' : ''} to="/app/admin/receipts">▤ <span>Receipts</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/import') ? 'active' : ''} to="/app/admin/import">⇧ <span>Data Import</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/applicants') ? 'active' : ''} to="/app/admin/applicants">◉ <span>Applicants</span></Link>
+          <Link className={location.pathname.startsWith('/app/admin/loan-applications') ? 'active' : ''} to="/app/admin/loan-applications">📋 <span>Loan Application</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/loan-cases') ? 'active' : ''} to="/app/admin/loan-cases">▤ <span>Loan Cases</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/repo-cases') ? 'active' : ''} to="/app/admin/repo-cases">🚗 <span>Repo</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/reports') ? 'active' : ''} to="/app/admin/reports">▤ <span>Reports</span></Link>
@@ -74,8 +76,6 @@ export default function AdminDashboard() {
           <div className="nav-section-label"><span>Masters</span></div>
           <Link className={location.pathname.startsWith('/app/admin/masters/oem') ? 'active' : ''} to="/app/admin/masters/oem">🏭 <span>OEM</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/hp') ? 'active' : ''} to="/app/admin/masters/hp">⚖ <span>HP (Hypothecation)</span></Link>
-          <Link className={location.pathname.startsWith('/app/admin/masters/vehicle-models') ? 'active' : ''} to="/app/admin/masters/vehicle-models">🏍 <span>Vehicle Model</span></Link>
-          <Link className={location.pathname.startsWith('/app/admin/masters/loan-types') ? 'active' : ''} to="/app/admin/masters/loan-types">₹ <span>Loan Type</span></Link>
           <Link className={location.pathname.startsWith('/app/admin/masters/batteries') ? 'active' : ''} to="/app/admin/masters/batteries">🔋 <span>Battery Master</span></Link>
           <Link className={location.pathname.startsWith('/app/accounting/expense-management') ? 'active' : ''} to="/app/accounting/expense-management">💸 <span>Expense Master</span></Link>
           <Link to="/app/accounting">▦ <span>Accounting</span></Link>
@@ -84,16 +84,28 @@ export default function AdminDashboard() {
         <button className="admin-logout" onClick={logout}><span>↪</span><span> Logout</span></button>
         <ThemeToggle inline />
       </aside>
+      <nav className="admin-mobile-nav" aria-label="Admin mobile navigation">
+        <Link to="/app/admin">⌂<span>Home</span></Link>
+        <Link to="/app/admin/accounts">♟<span>Accounts</span></Link>
+        <Link to="/app/admin/assign">➤<span>Assign</span></Link>
+        <Link to="/app/admin/receipts">▤<span>Receipts</span></Link>
+        <button type="button" onClick={() => {
+          const el = document.querySelector('.profile-trigger');
+          if (el) el.click();
+        }}>◉<span>Profile</span></button>
+      </nav>
       <main className="admin-main">
         <Routes>
           <Route index element={<AdminHome />} />
           <Route path="accounts" element={<ManageAccounts />} />
           <Route path="assign" element={<AssignApplications />} />
           <Route path="create-loan" element={<CreateLoan />} />
+          <Route path="manual-create-loan" element={<ManualCreateLoan />} />
           <Route path="payment-vouchers" element={<PaymentVouchers />} />
           <Route path="receipts" element={<Receipts />} />
           <Route path="import" element={<AdminTools />} />
           <Route path="applicants" element={<Applicants />} />
+          <Route path="loan-applications" element={<LoanApplications />} />
           <Route path="loan-cases" element={<LoanCases />} />
           <Route path="repo-cases" element={<RepoCases />} />
           <Route path="reports" element={<Reports />} />
@@ -101,8 +113,6 @@ export default function AdminDashboard() {
           <Route path="masters" element={<MastersHome />} />
           <Route path="masters/oem" element={<ManageOEM />} />
           <Route path="masters/hp" element={<ManageHP />} />
-          <Route path="masters/vehicle-models" element={<ManageVehicleModels />} />
-          <Route path="masters/loan-types" element={<ManageLoanTypes />} />
           <Route path="masters/batteries" element={<ManageBatteries />} />
         </Routes>
       </main>
@@ -123,10 +133,11 @@ function AdminHome() {
         <Link to="accounts" className="admin-home-card"><span>♟</span><div><h3>Manage Accounts</h3><p>Dealer aur sabhi Team Users — Admin, Field Executive, Tele Caller, DO aur Team Leader — ek hi jagah manage karein.</p></div><b>→</b></Link>
         <Link to="assign" className="admin-home-card"><span>➤</span><div><h3>Assign Applications</h3><p>CIBIL score check karke Field Executive ko FI assign karein.</p></div><b>→</b></Link>
         <Link to="create-loan" className="admin-home-card"><span>▣</span><div><h3>Create Loan</h3><p>Approved application se complete loan entry create karein.</p></div><b>→</b></Link>
+        <Link to="manual-create-loan" className="admin-home-card"><span>✚</span><div><h3>Manual Create Loan</h3><p>Admin se direct loan application create karein; dealer manually enter hoga.</p></div><b>→</b></Link>
         <Link to="receipts" className="admin-home-card"><span>▤</span><div><h3>Receipts</h3><p>Loan select karke amount/date se receipt entry aur loan detail PDF print karein.</p></div><b>→</b></Link>
         <Link to="payment-vouchers" className="admin-home-card"><span>₹</span><div><h3>Payment Vouchers</h3><p>Tele Caller, FE aur other incentives/payments record karein.</p></div><b>→</b></Link>
         <Link to="loan-cases" className="admin-home-card"><span>▤</span><div><h3>Loan Cases</h3><p>Active, suit filed, vehicle seized aur file/ledger details manage karein.</p></div><b>→</b></Link>
-        <Link to="masters" className="admin-home-card"><span>☰</span><div><h3>Masters</h3><p>HP, Vehicle Model and Loan Type master data.</p></div><b>→</b></Link>
+        <Link to="masters" className="admin-home-card"><span>☰</span><div><h3>Masters</h3><p>HP, OEM and Battery master data.</p></div><b>→</b></Link>
         <Link to="reports" className="admin-home-card"><span>▤</span><div><h3>Reports</h3><p>Day Book, collections, expenses, NOC, repo and loan ledger reports.</p></div><b>→</b></Link>
         <Link to="collection-risk" className="admin-home-card"><span>⚠</span><div><h3>Collection & Risk</h3><p>NPA ageing, penal/bounce config aur restructure-foreclosure requests.</p></div><b>→</b></Link>
         <Link to="/app/accounting" className="admin-home-card"><span>▦</span><div><h3>Accounting</h3><p>Open accounting and finance module.</p></div><b>→</b></Link>

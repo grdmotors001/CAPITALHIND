@@ -1,13 +1,52 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addReceipt, createLoan, listApprovedLoans } from './api';
+import { addReceipt, createLoan, createManualLoan, createGrdTestApproved, listApprovedLoans, listDealers, listVehicleModelsAdmin, listHP, listLoanTypes } from './api';
 
 function money(value) {
   const n = Number(value || 0);
   return Number.isFinite(n) ? `₹${n.toLocaleString('en-IN')}` : '—';
 }
 
+function ManualLoanForm() {
+  const [form,setForm]=useState({dealer:'',customer:'',phone:'',model:'',vehicle_price:'',down_payment:'',loan_amount:'',tenure:'36',loan_type:'NEW',financer:'',vehicle_no:'',chassis_no:'',disbursement_date:'',disbursed_amount:''});
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState(''); const [err,setErr]=useState('');
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const submit=async e=>{e.preventDefault();setSaving(true);setMsg('');setErr('');try{const d=await createLoan({manual:true,...form});setMsg(d.message||'Manual loan created successfully.');}catch(x){setErr(x.message||'Could not create loan.')}finally{setSaving(false)}};
+  return <form className="staff-form" onSubmit={submit}>
+    {msg&&<div className="admin-alert success">✓ {msg}</div>}{err&&<div className="admin-alert error">⚠ {err}</div>}
+    <div className="form-grid">
+      <div><label>Dealer *</label><input required value={form.dealer} onChange={e=>set('dealer',e.target.value)} placeholder="Enter dealer name/code"/></div>
+      <div><label>Customer Name *</label><input required value={form.customer} onChange={e=>set('customer',e.target.value)}/></div>
+      <div><label>Mobile *</label><input required maxLength="10" value={form.phone} onChange={e=>set('phone',e.target.value.replace(/\D/g,'').slice(0,10))}/></div>
+      <div><label>Vehicle Model</label><input value={form.model} onChange={e=>set('model',e.target.value)}/></div>
+      <div><label>Vehicle Price</label><input type="number" min="0" value={form.vehicle_price} onChange={e=>{set('vehicle_price',e.target.value);set('loan_amount',Math.max(0,Number(e.target.value||0)-Number(form.down_payment||0)))}}/></div>
+      <div><label>Down Payment</label><input type="number" min="0" value={form.down_payment} onChange={e=>{set('down_payment',e.target.value);set('loan_amount',Math.max(0,Number(form.vehicle_price||0)-Number(e.target.value||0)))}}/></div>
+      <div><label>Loan Amount *</label><input required type="number" min="1" value={form.loan_amount} onChange={e=>set('loan_amount',e.target.value)}/></div>
+      <div><label>Tenure (Months)</label><select value={form.tenure} onChange={e=>set('tenure',e.target.value)}>{[12,18,24,30,36,48].map(x=><option key={x}>{x}</option>)}</select></div>
+      <div><label>Loan Type</label><select value={form.loan_type} onChange={e=>set('loan_type',e.target.value)}><option value="NEW">NEW MODEL</option><option value="OLD">OLD MODEL</option></select></div>
+      <div><label>Financer / HP</label><input value={form.financer} onChange={e=>set('financer',e.target.value)} placeholder="Enter financer"/></div>
+      <div><label>Vehicle No.</label><input value={form.vehicle_no} onChange={e=>set('vehicle_no',e.target.value.toUpperCase())}/></div>
+      <div><label>Chassis No.</label><input value={form.chassis_no} onChange={e=>set('chassis_no',e.target.value.toUpperCase())}/></div>
+      <div><label>Disbursement Date</label><input type="date" value={form.disbursement_date} onChange={e=>set('disbursement_date',e.target.value)}/></div>
+      <div><label>Disbursed Amount</label><input type="number" min="0" value={form.disbursed_amount} onChange={e=>set('disbursed_amount',e.target.value)}/></div>
+    </div>
+    <button className="admin-btn" disabled={saving}>{saving?'Creating…':'✓ Create Manual Loan'}</button>
+  </form>;
+}
+
 export default function CreateLoan() {
   const [applications, setApplications] = useState([]);
+  const [manualOpen, setManualOpen] = useState(true);
+  const [dealers, setDealers] = useState([]);
+  const [models, setModels] = useState([]);
+  const [hps, setHps] = useState([]);
+  const [loanTypes, setLoanTypes] = useState([]);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualMessage, setManualMessage] = useState('');
+  const [manualError, setManualError] = useState('');
+  const [grdTestSaving, setGrdTestSaving] = useState(false);
+  const [grdTestMessage, setGrdTestMessage] = useState('');
+  const [grdTestError, setGrdTestError] = useState('');
+  const [manual, setManual] = useState({ dealer_code:'', customer_name:'', customer_phone:'', customer_dob:'', customer_pan:'', customer_aadhaar:'', customer_address:'', customer_city:'', customer_state:'', customer_pincode:'', vehicle_model:'', vehicle_price:'', down_payment:'', loan_amount:'', tenure_months:'', loan_type:'', hypothecation:'', vehicle_no:'', chassis_no:'', disbursement_date:'', disbursed_amount:'', loan_account_no:'' });
   const [selectedId, setSelectedId] = useState('');
   const [accountNo, setAccountNo] = useState('');
   const [entry, setEntry] = useState({ vehicle_no:'', chassis_no:'', ledger_no:'', file_no:'', cheques_qty:0, file_record_no:'', case_status:'active', disbursement_date:'', disbursed_amount:'' });
@@ -32,7 +71,7 @@ export default function CreateLoan() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); Promise.all([listDealers(), listVehicleModelsAdmin(), listHP(), listLoanTypes()]).then(([d,m,h,l]) => { setDealers(d.dealers||[]); setModels(m.models||m.vehicle_models||[]); setHps(h.hps||[]); setLoanTypes(l.loan_types||[]); }).catch((e) => setManualError(e.message || 'Could not load masters.')); }, []);
 
   const selected = useMemo(
     () => applications.find((a) => a.id === selectedId) || null,
@@ -84,6 +123,46 @@ export default function CreateLoan() {
       </div>
 
       {message && <div className="admin-alert success">✓ {message}</div>}
+      {grdTestMessage && <div className="admin-alert success">✓ {grdTestMessage}</div>}
+      {grdTestError && <div className="admin-alert error">⚠ {grdTestError}</div>}
+      <section className="admin-card staff-list-card" style={{ marginBottom: 20 }}>
+        <div className="admin-card-title">
+          <div><h2>GRD Integration Test</h2><span>Temporary approved application banayein, taaki GRD → Approved → Dealer Pending flow check ho sake.</span></div>
+          <button className="admin-btn" disabled={grdTestSaving} onClick={async () => {
+            setGrdTestSaving(true); setGrdTestMessage(''); setGrdTestError('');
+            try { const d = await createGrdTestApproved(); setGrdTestMessage(d.message || 'GRD test approved application created.'); await load(); }
+            catch (e) { setGrdTestError(e.message || 'GRD test application create failed.'); }
+            finally { setGrdTestSaving(false); }
+          }}>{grdTestSaving ? 'Creating…' : '✓ Create GRD Test Approved'}</button>
+        </div>
+      </section>
+
+      <section className="admin-card staff-list-card" style={{ marginBottom: 20 }}>
+        <div className="admin-card-title"><div><h2>Manual Create Loan</h2><span>Admin dealer dropdown se select karke direct loan create karein.</span></div><button type="button" className="admin-btn secondary" onClick={() => setManualOpen(v=>!v)}>{manualOpen ? "Hide" : "Open"}</button></div>
+        {manualOpen && <form className="staff-form" onSubmit={async (e) => {
+          e.preventDefault(); setManualSaving(true); setManualMessage(''); setManualError('');
+          try { if (!manual.dealer_code) throw new Error("Dealer select karein."); const d = await createManualLoan(manual); setManualMessage(d.message || "Manual loan created successfully."); setManual({ dealer_code:"", customer_name:"", customer_phone:"", customer_dob:"", customer_pan:"", customer_aadhaar:"", customer_address:"", customer_city:"", customer_state:"", customer_pincode:"", vehicle_model:"", vehicle_price:"", down_payment:"", loan_amount:"", tenure_months:"", loan_type:"", hypothecation:"", vehicle_no:"", chassis_no:"", disbursement_date:"", disbursed_amount:"", loan_account_no:"" }); } catch (e) { setManualError(e.message || "Manual loan create failed."); } finally { setManualSaving(false); }
+        }}>
+          {manualError && <div className="admin-alert error">⚠ {manualError}</div>}{manualMessage && <div className="admin-alert success">✓ {manualMessage}</div>}
+          <div className="form-grid">
+            <div><label>Dealer *</label><select required value={manual.dealer_code} onChange={e=>setManual({...manual,dealer_code:e.target.value})}><option value="">Select Dealer</option>{dealers.map(d=><option key={d.code||d.id} value={d.code||d.id}>{d.name||d.dealer_name}{d.code ? " ("+d.code+")" : ""}</option>)}</select></div>
+            <div><label>Customer Name *</label><input required value={manual.customer_name} onChange={e=>setManual({...manual,customer_name:e.target.value})}/></div>
+            <div><label>Mobile *</label><input required maxLength="10" inputMode="numeric" value={manual.customer_phone} onChange={e=>setManual({...manual,customer_phone:e.target.value.replace(/\D/g,"").slice(0,10)})}/></div>
+            <div><label>Date of Birth *</label><input required type="date" value={manual.customer_dob} onChange={e=>setManual({...manual,customer_dob:e.target.value})}/></div>
+            <div><label>PAN *</label><input required maxLength="10" value={manual.customer_pan} onChange={e=>setManual({...manual,customer_pan:e.target.value.toUpperCase()})}/></div>
+            <div><label>Aadhaar *</label><input required maxLength="12" inputMode="numeric" value={manual.customer_aadhaar} onChange={e=>setManual({...manual,customer_aadhaar:e.target.value.replace(/\D/g,"").slice(0,12)})}/></div>
+            <div className="form-field-full"><label>Address *</label><textarea required rows="2" value={manual.customer_address} onChange={e=>setManual({...manual,customer_address:e.target.value})}/></div>
+            <div><label>City</label><input value={manual.customer_city} onChange={e=>setManual({...manual,customer_city:e.target.value})}/></div><div><label>State</label><input value={manual.customer_state} onChange={e=>setManual({...manual,customer_state:e.target.value})}/></div><div><label>Pincode *</label><input required maxLength="6" inputMode="numeric" value={manual.customer_pincode} onChange={e=>setManual({...manual,customer_pincode:e.target.value.replace(/\D/g,"").slice(0,6)})}/></div>
+            <div><label>Vehicle Model *</label><select required value={manual.vehicle_model} onChange={e=>setManual({...manual,vehicle_model:e.target.value})}><option value="">Select Model</option>{models.map(m=><option key={m.id||m.code} value={m.name||m.model_name}>{m.name||m.model_name}</option>)}</select></div>
+            <div><label>Vehicle Price *</label><input required type="number" min="1" value={manual.vehicle_price} onChange={e=>setManual({...manual,vehicle_price:e.target.value})}/></div><div><label>Down Payment *</label><input required type="number" min="0" value={manual.down_payment} onChange={e=>setManual({...manual,down_payment:e.target.value})}/></div><div><label>Loan Amount</label><input type="number" min="0" value={manual.loan_amount} placeholder="Auto = Price - DP" onChange={e=>setManual({...manual,loan_amount:e.target.value})}/></div>
+            <div><label>Tenure *</label><select required value={manual.tenure_months} onChange={e=>setManual({...manual,tenure_months:e.target.value})}><option value="">Select</option>{[12,18,24,30,36,48].map(n=><option key={n} value={n}>{n} Months</option>)}</select></div>
+            <div><label>Loan Type</label><select value={manual.loan_type} onChange={e=>setManual({...manual,loan_type:e.target.value})}><option value="">Select Loan Type</option>{loanTypes.map(x=><option key={x.id||x.code} value={x.name||x.loan_type}>{x.name||x.loan_type}</option>)}</select></div>
+            <div><label>HP / Financer</label><select value={manual.hypothecation} onChange={e=>setManual({...manual,hypothecation:e.target.value})}><option value="">Select HP</option>{hps.map(x=><option key={x.id||x.code} value={x.name||x.hp_name}>{x.name||x.hp_name}</option>)}</select></div>
+            <div><label>Vehicle No.</label><input value={manual.vehicle_no} onChange={e=>setManual({...manual,vehicle_no:e.target.value.toUpperCase()})}/></div><div><label>Chassis No.</label><input value={manual.chassis_no} onChange={e=>setManual({...manual,chassis_no:e.target.value.toUpperCase()})}/></div>
+            <div><label>Disbursement Date</label><input type="date" value={manual.disbursement_date} onChange={e=>setManual({...manual,disbursement_date:e.target.value})}/></div><div><label>Disbursed Amount</label><input type="number" min="0" value={manual.disbursed_amount} onChange={e=>setManual({...manual,disbursed_amount:e.target.value})}/></div><div><label>Loan Account No.</label><input value={manual.loan_account_no} placeholder="Blank = auto generate" onChange={e=>setManual({...manual,loan_account_no:e.target.value})}/></div>
+          </div><button className="admin-btn" type="submit" disabled={manualSaving}>{manualSaving ? "Creating…" : "✓ Create Manual Loan"}</button>
+        </form>}
+      </section>
       {error && <div className="admin-alert error">⚠ {error}</div>}
 
       <section className="admin-card staff-list-card">
@@ -117,7 +196,7 @@ export default function CreateLoan() {
         </div>
       </section>
 
-      {selected && (
+\n      <section className="admin-card staff-list-card" style={{ marginTop: 20 }}>\n        <div className="admin-card-title"><div><h2>Manual Create Loan</h2><span>Dealer manually enter karein. Ye direct admin loan entry hai.</span></div></div>\n        <ManualLoanForm />\n      </section>\n\n      {selected && (
         <section className="admin-card staff-list-card" style={{ marginTop: 20 }}>
           <div className="admin-card-title">
             <div><h2>Loan Details</h2><span>Application data automatically loaded from approved loan.</span></div>

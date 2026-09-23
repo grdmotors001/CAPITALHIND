@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       const [{ data: batteries, error: bErr }, { data: dealers, error: dErr }, { data: repos, error: rErr }] = await Promise.all([
         s.from('battery_master').select('id,battery_name').eq('is_active', true).order('battery_name'),
         s.from('dealer_master').select('id,dealer_name,dealer_code').eq('is_active', true).order('dealer_name'),
-        s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,model_name,colour,toolkit,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,resale_status,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone),vehicle_model_master(model_name))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
+        s.from('vehicle_repossessions').select(`id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at,battery_master(battery_name),dealer_master(dealer_name),loan_applications(application_no,loan_account_no,customer_profiles(full_name,phone))`).eq('seized_by_fe_id', session.user_id).order('created_at', { ascending: false }).limit(200),
       ]);
       if (bErr || dErr || rErr) {
         console.error('[field-executive/repossession GET]', bErr?.message || dErr?.message || rErr?.message);
@@ -43,15 +43,11 @@ export default async function handler(req, res) {
     const charger_available = body.charger_available === true || body.charger_available === 'true';
     const battery_no = String(body.battery_no || '').trim();
     const battery_master_id = body.battery_master_id ? Number(body.battery_master_id) : null;
-    const parked_location_type = String(body.parked_location_type || (body.parked_dealer_id ? 'dealer' : 'factory')).trim().toLowerCase();
-    const parked_dealer_id = parked_location_type === 'factory' ? null : (body.parked_dealer_id ? Number(body.parked_dealer_id) : null);
-    const model_name = String(body.model_name || '').trim();
-    const colour = String(body.colour || '').trim();
-    const toolkit = String(body.toolkit || '').trim();
+    const parked_dealer_id = body.parked_dealer_id ? Number(body.parked_dealer_id) : null;
     const remarks = String(body.remarks || '').trim();
 
-    if (!Number.isInteger(loan_application_id) || !vehicle_no || !repo_date || !repo_time || !['dealer','factory'].includes(parked_location_type) || (parked_location_type === 'dealer' && !parked_dealer_id)) {
-      return sendError(res, 422, 'Loan, Repo date/time, Vehicle No. and parked location are required.');
+    if (!Number.isInteger(loan_application_id) || !vehicle_no || !repo_date || !repo_time || !parked_dealer_id) {
+      return sendError(res, 422, 'Loan, Repo date/time, Vehicle No. and parked Dealer are required.');
     }
     if (battery_available && (!battery_master_id || !battery_no)) {
       return sendError(res, 422, 'Battery No. and Battery Name are required when Battery = Yes.');
@@ -76,20 +72,17 @@ export default async function handler(req, res) {
 
     const [{ data: battery, error: batteryErr }, { data: dealer, error: dealerErr }] = await Promise.all([
       battery_available ? s.from('battery_master').select('id,battery_name').eq('id', battery_master_id).eq('is_active', true).maybeSingle() : Promise.resolve({ data: null, error: null }),
-      parked_location_type === 'dealer'
-        ? s.from('dealer_master').select('id,dealer_name').eq('id', parked_dealer_id).eq('is_active', true).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+      s.from('dealer_master').select('id,dealer_name').eq('id', parked_dealer_id).eq('is_active', true).maybeSingle(),
     ]);
     if (batteryErr || (battery_available && !battery)) return sendError(res, 422, 'Selected Battery master is invalid.');
-    if (parked_location_type === 'dealer' && (dealerErr || !dealer)) return sendError(res, 422, 'Selected parked Dealer is invalid.');
+    if (dealerErr || !dealer) return sendError(res, 422, 'Selected parked Dealer is invalid.');
 
     const { data: repo, error: repoErr } = await s.from('vehicle_repossessions').insert({
       loan_application_id, repo_date, repo_time, seized_by_fe_id: session.user_id, vehicle_no,
-      model_name: model_name || null, colour: colour || null, toolkit: toolkit || null,
       battery_available, battery_no: battery_available ? battery_no : null,
       battery_master_id: battery_available ? battery_master_id : null,
-      rc_available, charger_available, parked_dealer_id, resale_status: 'SEIZED', remarks: remarks || null,
-    }).select('id,loan_application_id,repo_date,repo_time,vehicle_no,model_name,colour,toolkit,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,resale_status,remarks,created_at').single();
+      rc_available, charger_available, parked_dealer_id, remarks: remarks || null,
+    }).select('id,loan_application_id,repo_date,repo_time,vehicle_no,battery_available,battery_no,battery_master_id,rc_available,charger_available,parked_dealer_id,remarks,created_at').single();
     if (repoErr) {
       console.error('[field-executive/repossession insert]', repoErr.message);
       if (repoErr.code === '23505') return sendError(res, 409, 'Repo is already recorded for this loan.');
@@ -105,9 +98,9 @@ export default async function handler(req, res) {
       await s.from('vehicle_repossessions').delete().eq('id', repo.id);
       return sendError(res, 500, 'Repo saved but loan status could not be updated. Please retry.');
     }
-    await s.from('application_status_history').insert({ loan_application_id, from_status: loan.case_status || null, to_status: 'vehicle_seized', changed_by: null, changed_by_type: 'field_executive', remarks: `Vehicle Repo recorded by FI ${session.user_id}. Parked at ${dealer?.dealer_name || 'GRD Factory'}.` });
+    await s.from('application_status_history').insert({ loan_application_id, from_status: loan.case_status || null, to_status: 'vehicle_seized', changed_by: null, changed_by_type: 'field_executive', remarks: `Vehicle Repo recorded by FI ${session.user_id}. Parked at ${dealer.dealer_name}.` });
 
-    return res.status(200).json({ success: true, message: 'Vehicle Repo recorded successfully.', repo: { ...repo, battery_name: battery?.battery_name || null, dealer_name: dealer?.dealer_name || 'GRD Factory', parked_location_type, fe_user_id: session.user_id } });
+    return res.status(200).json({ success: true, message: 'Vehicle Repo recorded successfully.', repo: { ...repo, battery_name: battery?.battery_name || null, dealer_name: dealer.dealer_name, fe_user_id: session.user_id } });
   } catch (err) {
     console.error('[field-executive/repossession] unhandled', err);
     return sendError(res, 500, 'Could not process Vehicle Repo.');

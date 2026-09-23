@@ -1,31 +1,25 @@
 // GET /api/admin/masters/list-loan-types
-// Lists Loan Type master records. Admin-only (JWT).
-
-import { getSupabase } from '../../_lib/supabase.js';
+// Finance/financer master is owned by GRD and exposed read-only to CHFPL.
 import { requireAdminAuth, sendError, methodGuard } from '../../_lib/auth.js';
+import { fetchGrdMasters, mapGrdFinancers } from '../../_lib/grd.js';
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, 'GET')) return;
-
   const session = requireAdminAuth(req, res);
   if (!session) return;
-
   try {
-    const supabase = getSupabase();
-
-    const { data, error } = await supabase
-      .from('loan_type_master')
-      .select('id, loan_type_name, description, is_active, created_at')
-      .order('loan_type_name', { ascending: true });
-
-    if (error) {
-      console.error('[admin/masters/list-loan-types]', error.message);
-      return sendError(res, 500, 'Failed to load loan type master.');
-    }
-
-    return res.status(200).json({ success: true, items: data || [] });
+    const data = await fetchGrdMasters();
+    const items = mapGrdFinancers(data).map((f) => ({
+      id: f.id,
+      loan_type_name: f.financer_name,
+      description: [f.code, f.mobile].filter(Boolean).join(' · '),
+      is_active: true,
+      source: 'grd',
+      ...f,
+    }));
+    return res.status(200).json({ success: true, items, financers: items, source: 'grd' });
   } catch (err) {
-    console.error('[admin/masters/list-loan-types] unhandled', err);
-    return sendError(res, 500, 'Failed to load loan type master.');
+    console.error('[admin/masters/list-loan-types GRD]', err.message || err);
+    return sendError(res, 502, 'Failed to load finance master from GRD.');
   }
 }

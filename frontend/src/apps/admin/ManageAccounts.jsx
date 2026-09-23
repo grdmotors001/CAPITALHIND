@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  createDealer, createUser, deleteDealer, deleteUser,
+  createUser, deleteUser,
   listDealers, listUsers, updateDealer, updateUser, listStaff, createStaff, deleteStaff, updateStaffContact,
 } from './api';
 
@@ -43,9 +43,7 @@ export default function ManageAccounts() {
     e.preventDefault(); setSaving(true); clearAlerts();
     try {
       let data;
-      if (form.type === 'dealer') {
-        data = await createDealer({ dealer_name: form.dealer_name, dealer_code: form.dealer_code, full_name: form.full_name, phone: form.phone, password: form.password });
-      } else if (form.type === 'cashier') {
+      if (form.type === 'cashier') {
         data = await createStaff({ username: form.full_name, contact_mobile: form.phone, password: form.password, role: 'cashier', email: form.email });
       } else {
         data = await createUser({ full_name: form.full_name, phone: form.phone, password: form.password, role: form.role, email: form.email });
@@ -60,7 +58,8 @@ export default function ManageAccounts() {
     try {
       let data;
       if (editing.kind === 'dealer') {
-        data = await updateDealer({ id: editing.id, dealer_name: editing.dealer_name, dealer_code: editing.dealer_code });
+        setError('Dealer data is fetched from GRD and cannot be edited here.');
+        return;
       } else if (editing.kind === 'staff') {
         data = await updateStaffContact({ id: editing.id, role: editing.role, source: 'staff_accounts', contact_mobile: editing.contact_mobile || '', email: editing.email || '' });
       } else {
@@ -76,7 +75,11 @@ export default function ManageAccounts() {
     if (!window.confirm(`Remove "${label}"?`)) return;
     clearAlerts();
     try {
-      const data = item.kind === 'dealer' ? await deleteDealer(item.id) : (item.kind === 'staff' ? await deleteStaff(item) : await deleteUser(item.id));
+      if (item.kind === 'dealer') {
+        setError('Dealer data is fetched from GRD and cannot be removed here.');
+        return;
+      }
+      const data = item.kind === 'staff' ? await deleteStaff(item) : await deleteUser(item.id);
       setMessage(data.message || 'Account removed.'); await load();
     } catch (e) { setError(e.message || 'Could not remove account.'); }
   }
@@ -100,24 +103,18 @@ export default function ManageAccounts() {
     {tab === 'cashiers' && <AccountTable loading={loading} rows={staffRows} kind="staff" onEdit={setEditing} onRemove={remove} />}
 
     <section className="admin-card create-card">
-      <div className="admin-card-title"><div><h2>+ Create New Account</h2><span>Dealer login bhi isi screen se create hoga</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
+      <div className="admin-card-title"><div><h2>+ Create New Account</h2><span>Dealer accounts are fetched from GRD and cannot be created here.</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
       <form className="staff-form" onSubmit={createAccount}>
         <div className="account-create-type">
-          {['user', 'dealer', 'cashier'].map(t => <button type="button" key={t} className={form.type === t ? 'active' : ''} onClick={() => { setField('type', t); if (t === 'user') setField('role', 'field_executive'); clearAlerts(); }}>{t === 'user' ? 'Team User' : (t === 'cashier' ? 'Cashier' : 'Dealer')}</button>)}
+          {['user', 'cashier'].map(t => <button type="button" key={t} className={form.type === t ? 'active' : ''} onClick={() => { setField('type', t); if (t === 'user') setField('role', 'field_executive'); clearAlerts(); }}>{t === 'user' ? 'Team User' : 'Cashier'}</button>)}
         </div>
-        {form.type === 'dealer' ? <div className="form-grid">
-          <div><label>Dealer Name</label><input value={form.dealer_name} onChange={e => setField('dealer_name', e.target.value)} required /></div>
-          <div><label>Dealer Code</label><input value={form.dealer_code} onChange={e => setField('dealer_code', e.target.value.toUpperCase())} required placeholder="DLR001" /></div>
-          <div><label>Dealer Login Name</label><input value={form.full_name} onChange={e => setField('full_name', e.target.value)} required /></div>
-          <div><label>Mobile / Login ID <span>(10 digits)</span></label><input value={form.phone} onChange={e => setField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" required placeholder="98xxxxxxxx" /></div>
-          <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={e => setField('password', e.target.value)} minLength="8" required /></div>
-        </div> : <div className="form-grid">
+        <div className="form-grid">
           <div><label>{form.type === 'cashier' ? 'Cashier Name / Username' : 'Full Name'}</label><input value={form.full_name} onChange={e => setField('full_name', e.target.value)} required /></div>
           <div><label>Phone <span>(10 digits)</span></label><input value={form.phone} onChange={e => setField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength="10" required={form.type === 'user'} /></div>
           <div><label>Password <span>(minimum 8 characters)</span></label><input type="password" value={form.password} onChange={e => setField('password', e.target.value)} minLength="8" required /></div>
           {form.type === 'user' && <div><label>Role</label><select value={form.role} onChange={e => setField('role', e.target.value)}><option value="field_executive">Field Executive</option><option value="tele_caller">Tele Caller</option><option value="do">Disbursement Officer</option><option value="team_leader">Team Leader</option><option value="customer">Customer</option><option value="admin">Admin</option></select></div>}
           <div><label>Email <span>(optional)</span></label><input type="email" value={form.email} onChange={e => setField('email', e.target.value)} /></div>
-        </div>}
+        </div>
         <button className="admin-btn" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</button>
       </form>
     </section>
@@ -135,5 +132,5 @@ function AccountTable({ loading, rows, kind, onEdit, onRemove }) {
 }
 
 function DealerTable({ loading, rows, onEdit, onRemove }) {
-  return <section className="admin-card staff-list-card"><div className="admin-card-title"><div><h2>Dealer Accounts</h2><span>Dealer master + dealer login</span></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Dealer</th><th>Code</th><th>Login User</th><th>Mobile</th><th>Added</th><th>Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan="6" className="empty-cell">Loading dealers…</td></tr> : rows.length === 0 ? <tr><td colSpan="6" className="empty-cell">No dealers found.</td></tr> : rows.map(d => { const u=(d.users||[])[0]; return <tr key={d.id}><td><strong>{d.dealer_name}</strong></td><td><span className="role-pill dealer">{d.dealer_code}</span></td><td>{u?.full_name || '—'}</td><td>{u?.phone || '—'}</td><td>{String(d.created_at || '').slice(0,10) || '—'}</td><td className="actions-cell"><button className="admin-btn small secondary" onClick={() => onEdit({...d, kind:'dealer'})}>Edit</button><button className="admin-btn small danger" onClick={() => onRemove({...d, kind:'dealer'})}>Remove</button></td></tr>; })}</tbody></table></div></section>;
+  return <section className="admin-card staff-list-card"><div className="admin-card-title"><div><h2>Dealer Accounts</h2><span>Dealer master + dealer login</span></div></div><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Dealer</th><th>Code</th><th>Login User</th><th>Mobile</th><th>Added</th><th>Actions</th></tr></thead><tbody>{loading ? <tr><td colSpan="6" className="empty-cell">Loading dealers…</td></tr> : rows.length === 0 ? <tr><td colSpan="6" className="empty-cell">No dealers found.</td></tr> : rows.map(d => { const u=(d.users||[])[0]; return <tr key={d.id}><td><strong>{d.dealer_name}</strong></td><td><span className="role-pill dealer">{d.dealer_code}</span></td><td>{u?.full_name || '—'}</td><td>{u?.phone || '—'}</td><td>{String(d.created_at || '').slice(0,10) || '—'}</td><td className="actions-cell"><span className="muted">Fetched from GRD</span></td></tr>; })}</tbody></table></div></section>;
 }
