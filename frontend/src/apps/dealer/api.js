@@ -17,3 +17,23 @@ export function fetchDeliveries(){return api('/api/workflow/deliveries').then(d=
 export function lockDelivery(body){return api('/api/workflow/deliveries',{method:'POST',body:JSON.stringify(body)}).then(d=>d.delivery)}
 export function createDealerSale(body){return api('/api/workflow/sales',{method:'POST',body:JSON.stringify(body)}).then(d=>d.sale)}
 export function fetchDealerSales(){return api('/api/workflow/sales').then(d=>d.sales)}
+export async function uploadKycDocument({loanApplicationId, customerId, docType, file}){
+  const formData = new FormData();
+  formData.append('loan_application_id', String(loanApplicationId));
+  formData.append('customer_id', String(customerId));
+  formData.append('doc_type', docType);
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE}/upload-kyc-document`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    const e = new Error(data.error || 'KYC document upload failed');
+    e.details = data.errors;
+    throw e;
+  }
+  return data;
+}
