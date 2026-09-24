@@ -14,19 +14,26 @@ export default async function handler(req, res) {
 
   try {
     const supabase = getSupabase();
+    const grdOnly = String(req.query?.grd_only || '') === '1';
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('loan_applications')
       .select(`
         id, application_no, application_status, physical_register_serial_no, cibil_score, cibil_checked_at, loan_amount_requested,
         tenure_months, submitted_at, assigned_fe_id, assigned_at,
-        dealer_master ( dealer_name ),
+        dealer_master ( dealer_name, dealer_code, grd_dealer_id ),
         customer_profiles ( full_name, phone ),
         vehicle_model_master ( model_name ),
         fi_reports ( recommendation, remarks, created_at )
       `)
       .order('created_at', { ascending: false })
       .limit(200);
+
+    if (grdOnly) {
+      query = query.not('dealer_master.grd_dealer_id', 'is', null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('[admin/list-loan-applications]', error.message);
@@ -56,6 +63,8 @@ export default async function handler(req, res) {
         tenure_months: row.tenure_months,
         submitted_at: row.submitted_at,
         dealer_name: row.dealer_master?.dealer_name ?? null,
+        dealer_code: row.dealer_master?.dealer_code ?? null,
+        grd_dealer_id: row.dealer_master?.grd_dealer_id ?? null,
         customer_name: row.customer_profiles?.full_name ?? null,
         customer_phone: row.customer_profiles?.phone ?? null,
         vehicle_model: row.vehicle_model_master?.model_name ?? null,
