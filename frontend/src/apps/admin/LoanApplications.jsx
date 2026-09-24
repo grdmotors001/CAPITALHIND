@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listLoanApplicationsAdmin } from './api';
+import { listLoanApplicationsAdmin, listGrdLoanApplicationsAdmin } from './api';
 
 const statusFor = (a) => {
   const s = String(a.application_status || '').toLowerCase();
@@ -20,7 +20,14 @@ const statusFor = (a) => {
 const fmt = v => v ? new Date(v).toLocaleDateString('en-IN') : '—';
 
 export default function LoanApplications() {
-  const [apps,setApps]=useState([]),[tab,setTab]=useState('all'),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[error,setError]=useState('');
+  const [apps,setApps]=useState([]);
+  const [grdApps,setGrdApps]=useState([]);
+  const [tab,setTab]=useState('all');
+  const [search,setSearch]=useState('');
+  const [loading,setLoading]=useState(true);
+  const [grdLoading,setGrdLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [grdError,setGrdError]=useState('');
 
   async function load(){
     setLoading(true);
@@ -35,9 +42,26 @@ export default function LoanApplications() {
     }
   }
 
+  async function loadGrd(){
+    setGrdLoading(true);
+    setGrdError('');
+    try{
+      const d=await listGrdLoanApplicationsAdmin();
+      setGrdApps(d.applications||[]);
+    }catch(e){
+      setGrdError(e.message||'Could not load GRD Motors applications');
+    }finally{
+      setGrdLoading(false);
+    }
+  }
+
+  async function loadAll(){
+    await Promise.all([load(), loadGrd()]);
+  }
+
   useEffect(()=>{
-    load();
-    const t=setInterval(load,15000);
+    loadAll();
+    const t=setInterval(loadAll,15000);
     return()=>clearInterval(t);
   },[]);
 
@@ -50,23 +74,37 @@ export default function LoanApplications() {
     [apps]
   );
 
+  const grdCounts=useMemo(
+    ()=>grdApps.reduce((x,a)=>{
+      const s=statusFor(a).key;
+      x[s]=(x[s]||0)+1;
+      return x;
+    },{}),
+    [grdApps]
+  );
+
   const filtered=useMemo(()=>{
+    const source=tab==='grd'?grdApps:apps;
     const q=search.trim().toLowerCase();
-    return apps.filter(a=>{
+    return source.filter(a=>{
       const st=statusFor(a);
-      if(tab!=='all'&&tab!==st.key)return false;
+      if(tab!=='all'&&tab!=='grd'&&tab!==st.key)return false;
       if(!q)return true;
       return [
         a.application_no,
         a.dealer_name,
         a.customer_name,
+        a.dealer_code,
         a.customer_phone,
         a.vehicle_model,
         a.application_status,
         st.label
       ].some(v=>String(v||'').toLowerCase().includes(q));
     });
-  },[apps,tab,search]);
+  },[apps,grdApps,tab,search]);
+
+  const currentLoading=tab==='grd'?grdLoading:loading;
+  const currentError=tab==='grd'?grdError:error;
 
   return <div className="admin-page">
     <div className="admin-page-head">
@@ -76,12 +114,12 @@ export default function LoanApplications() {
         <p>Complete application pipeline with live current status.</p>
       </div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-        <Link className="admin-btn secondary" to="/app/admin/manual-create-loan">＋ New Application</Link>
-        <button className="admin-btn" onClick={load} disabled={loading}>↻ Refresh</button>
+        {tab!=='grd' && <Link className="admin-btn secondary" to="/app/admin/manual-create-loan">＋ New Application</Link>}
+        <button className="admin-btn" onClick={tab==='grd'?loadGrd:load} disabled={currentLoading}>↻ Refresh</button>
       </div>
     </div>
 
-    {error&&<div className="admin-alert error">⚠ {error}</div>}
+    {currentError&&<div className="admin-alert error">⚠ {currentError}</div>}
 
     <div className="loan-app-top-tabs">
       {[
@@ -89,7 +127,8 @@ export default function LoanApplications() {
         ['bill','PENDING FOR BILL',counts.bill||0],
         ['fe','AT FE',counts.fe||0],
         ['do','AT DO',counts.do||0],
-        ['tvr','AT TVR',counts.tvr||0]
+        ['tvr','AT TVR',counts.tvr||0],
+        ['grd','GRD MOTORS',grdApps.length]
       ].map(([key,label,count])=>
         <button key={key} className={tab===key?'active':''} onClick={()=>setTab(key)}>
           {label}<b>{count}</b>
@@ -100,8 +139,8 @@ export default function LoanApplications() {
     <section className="admin-card staff-list-card">
       <div className="admin-card-title">
         <div>
-          <h2>{tab==='all'?'All Applications':tab==='bill'?'Pending for Bill':tab==='fe'?'Applications at FE':tab==='do'?'Applications at DO':'Applications at TVR'}</h2>
-          <span>Current workflow status is shown for every application.</span>
+          <h2>{tab==='all'?'All Applications':tab==='bill'?'Pending for Bill':tab==='fe'?'Applications at FE':tab==='do'?'Applications at DO':tab==='tvr'?'Applications at TVR':'GRD Motors — View Only'}</h2>
+          <span>{tab==='grd'?'GRD Motors applications only · View access only':'Current workflow status is shown for every application.'}</span>
         </div>
         <input
           className="admin-search"
@@ -127,16 +166,16 @@ export default function LoanApplications() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {currentLoading ? (
               <tr><td colSpan="8" className="empty-cell">Loading applications…</td></tr>
             ) : filtered.length===0 ? (
-              <tr><td colSpan="8" className="empty-cell">No applications in this tab.</td></tr>
+              <tr><td colSpan="8" className="empty-cell">{tab==='grd'?'No GRD Motors applications found.':'No applications in this tab.'}</td></tr>
             ) : filtered.map(a=>{
               const st=statusFor(a);
               return <tr key={a.id}>
                 <td><strong>{a.application_no||'—'}</strong><div className="muted">{a.physical_register_serial_no||''}</div></td>
                 <td>{a.customer_name||'—'}<div className="muted">{a.customer_phone||''}</div></td>
-                <td>{a.dealer_name||'—'}</td>
+                <td>{a.dealer_name||'—'}{a.dealer_code&&<div className="muted">{a.dealer_code}</div>}</td>
                 <td>{a.vehicle_model||'—'}<div className="muted">₹{Number(a.loan_amount_requested||0).toLocaleString('en-IN')}</div></td>
                 <td>
                   <span className={`role-pill ${st.cls}`}>{st.label}</span>
@@ -146,7 +185,9 @@ export default function LoanApplications() {
                 </td>
                 <td>{a.assigned_fe_name||'Not assigned'}</td>
                 <td>{fmt(a.submitted_at)}</td>
-                <td><Link className="admin-btn small secondary" to="/app/admin/assign">Open</Link></td>
+                <td>{tab==='grd'
+                  ? <span className="muted">View only</span>
+                  : <Link className="admin-btn small secondary" to="/app/admin/assign">Open</Link>}</td>
               </tr>;
             })}
           </tbody>
