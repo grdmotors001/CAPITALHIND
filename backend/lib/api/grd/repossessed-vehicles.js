@@ -53,7 +53,24 @@ export default async function handler(req,res){
       }
 
       const {data,error}=await q;
-      if(error) return res.status(500).json({success:false,error:'Could not load repossessed vehicles.'});
+      if(error){
+        console.error('[grd/repossessed] Supabase query failed', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        return res.status(500).json({
+          success:false,
+          error: 'Could not load repossessed vehicles.',
+          debug: {
+            message: error.message || null,
+            details: error.details || null,
+            hint: error.hint || null,
+            code: error.code || null,
+          },
+        });
+      }
       return res.status(200).json({success:true,vehicles:data||[]});
     }
 
