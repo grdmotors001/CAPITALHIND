@@ -3,6 +3,7 @@
 // Authenticates with X-GRD-BRIDGE-SECRET.
 import { getSupabase } from '../lib/api/_lib/supabase.js';
 import { sendError, methodGuard } from '../lib/api/_lib/auth.js';
+import { ensureGrdDealer } from '../lib/api/_lib/ensure-grd-dealer.js';
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, 'GET')) return;
@@ -22,18 +23,15 @@ export default async function handler(req, res) {
   const supabase = getSupabase();
 
   try {
-    let dealerQuery = supabase
-      .from('dealer_master')
-      .select('id, dealer_name, dealer_code, grd_dealer_id');
-
-    if (Number.isInteger(grdDealerId) && grdDealerId > 0) {
-      dealerQuery = dealerQuery.eq('grd_dealer_id', grdDealerId);
+    if (!Number.isInteger(grdDealerId) || grdDealerId <= 0) {
+      return sendError(res, 400, 'GRD dealer ID is required');
     }
 
-    const { data: dealers, error: dealerErr } = await dealerQuery;
-    if (dealerErr) throw dealerErr;
-
-    const dealerIds = (dealers || []).map(d => d.id);
+    // A GRD request is allowed to bootstrap the CHFPL dealer mirror.
+    // No manual dealer_master mapping is required.
+    const dealer = await ensureGrdDealer({ grdDealerId });
+    const dealers = [dealer];
+    const dealerIds = [dealer.id];
     if (!dealerIds.length) {
       return res.status(200).json({ success: true, applications: [] });
     }
