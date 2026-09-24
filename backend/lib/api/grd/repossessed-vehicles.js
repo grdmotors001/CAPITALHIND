@@ -1,4 +1,5 @@
 import { getSupabase } from '../_lib/supabase.js';
+import { ensureGrdDealer } from '../_lib/ensure-grd-dealer.js';
 
 function authorized(req){
   const expected=process.env.GRD_BRIDGE_SECRET || process.env.CHFPL_GRD_BRIDGE_SECRET || '';
@@ -45,26 +46,9 @@ export default async function handler(req,res){
       // Then filter vehicle_repossessions by the resolved local id.
       // Example: GRD Keshavpur 23 -> CHFPL dealer_master 310.
       if(dealerId){
-        const {data: mappedDealer, error: mapError}=await s.from('dealer_master')
-          .select('id,dealer_name,dealer_code,grd_dealer_id')
-          .eq('grd_dealer_id',dealerId)
-          .maybeSingle();
-
-        if(mapError){
-          console.error('[grd/repossessed] dealer identity lookup',mapError);
-          return res.status(500).json({
-            success:false,
-            error:'Could not resolve GRD dealer identity.'
-          });
-        }
-
-        if(!mappedDealer){
-          return res.status(409).json({
-            success:false,
-            error:'GRD dealer is not mapped to a CHFPL dealer_master record.'
-          });
-        }
-
+        // A GRD request is allowed to bootstrap the CHFPL dealer mirror.
+        // dealer_id is the immutable GRD dealer ID, not CHFPL's local ID.
+        const mappedDealer=await ensureGrdDealer({ grdDealerId: dealerId });
         q=q.eq('parked_dealer_id',mappedDealer.id);
       }
 
