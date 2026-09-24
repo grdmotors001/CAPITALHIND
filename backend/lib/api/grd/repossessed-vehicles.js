@@ -34,7 +34,7 @@ export default async function handler(req,res){
       const dealerId=requestedDealerId(req);
 
       let q=s.from('vehicle_repossessions')
-        .select('id, loan_application_id, repo_date, repo_time, vehicle_no, model_name, colour, toolkit, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, dealer_master(id,dealer_name,dealer_code,grd_dealer_id), loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone),grd_model_id,grd_model_code,grd_model_name)')
+        .select('id, loan_application_id, repo_date, repo_time, vehicle_no, model_name, colour, toolkit, battery_available, battery_no, battery_master_id, rc_available, charger_available, parked_dealer_id, resale_status, remarks, dealer_master(id,dealer_name,dealer_code,grd_dealer_id), loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone))')
         .in('resale_status',statuses)
         .order('repo_date',{ascending:false})
         .order('repo_time',{ascending:false})
