@@ -125,6 +125,10 @@ export function listLoanApplicationsAdmin() {
   return usersRequest('list-loan-applications');
 }
 
+export function listGrdLoanApplicationsAdmin() {
+  return usersRequest('list-loan-applications?grd_only=1');
+}
+
 export function assignFieldExecutive(payload) {
   return usersRequest('assign-fe', { method: 'POST', body: payload });
 }
