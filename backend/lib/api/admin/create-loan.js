@@ -1,4 +1,4 @@
-// POST /api/admin/create-loan
+﻿// POST /api/admin/create-loan
 // Converts one approved application into an active loan account and starts
 // its EMI schedule. Customer/dealer/application details come from the
 // approved loan application; this endpoint only accepts the remaining
@@ -266,3 +266,5 @@ export default async function handler(req, res) {
     return sendError(res, 500, 'Could not activate loan account.');
   }
 }
+
+

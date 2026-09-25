@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getAdminToken } from './api';
 
-const money = v => `₹${Number(v || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
+const money = v => `?${Number(v || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
 const statusLabel = s => String(s || 'draft').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 const FLOW = ['Application', 'FI', 'DO', 'TVR', 'Approved', 'Create Loan', 'EMI Active'];
@@ -21,33 +21,49 @@ function flowState(app) {
 
 function Workflow({ app }) {
   const state = flowState(app);
-  const currentIndex = Math.max(0, FLOW.indexOf(state.current));
-  return <div style={{minWidth:280}}>
-    <div style={{display:'flex',gap:4,alignItems:'center',marginBottom:7,flexWrap:'wrap'}}>
-      {FLOW.map((step,i) => {
-        const done = i < currentIndex && !state.rejected;
-        const current = step === state.current;
-        return <div key={step} title={step} style={{
-          padding:'4px 7px', borderRadius:12, fontSize:10, fontWeight:700,
-          background: done || current ? '#dcfce7' : '#f3f4f6',
-          color: done || current ? '#166534' : '#6b7280',
-          border: current ? '1px solid #22c55e' : '1px solid transparent',
-          whiteSpace:'nowrap'
-        }}>{done ? '✓ ' : ''}{step}</div>;
-      })}
+  const currentIndex = state.rejected ? 0 : Math.max(0, FLOW.indexOf(state.current));
+  return (
+    <div className="wf-stepper">
+      <div className="wf-track">
+        {FLOW.map((step,i) => {
+          const done = !state.rejected && i < currentIndex;
+          const current = !state.rejected && step === state.current;
+          return <div className="wf-step" key={step}>
+            <div title={current ? 'Current step' : done ? 'Completed' : 'Next step'}
+              className={'wf-pill' + (state.rejected ? ' rejected' : done ? ' done' : current ? ' current' : '')}>
+              {done ? '✓ ' : current ? '● ' : ''}{state.rejected && i===0 ? 'Rejected' : step}
+            </div>
+            {i < FLOW.length-1 && <div className={'wf-line' + (done ? ' done' : '')} />}
+          </div>;
+        })}
+      </div>
+      <div className="wf-meta">
+        <strong className={state.rejected ? 'rejected' : ''}>{state.rejected ? 'Rejected' : 'Current: ' + state.current}</strong>
+        {!state.rejected && <> · Next: {state.next}</>}
+        {app.tvr_status && <> · TVR: <strong>{statusLabel(app.tvr_status)}</strong></>}
+      </div>
     </div>
-    <div style={{fontSize:11}}>
-      <strong>Current:</strong> {state.current}
-      <span style={{marginLeft:10,color:'#6b7280'}}><strong>Next:</strong> {state.next}</span>
-      <span style={{marginLeft:10,color: String(app.tvr_status||'pending').toLowerCase()==='verified' ? '#166534' : '#92400e'}}><strong>TVR:</strong> {statusLabel(app.tvr_status || 'pending')}</span>
-    </div>
-  </div>;
+  );
 }
 
 async function request(path, opts={}) {
-  const r = await fetch(`/api/admin/${path}`, { method: opts.method || 'GET', headers: {'Content-Type':'application/json', Authorization:`Bearer ${getAdminToken()}`}, body: opts.body ? JSON.stringify(opts.body) : undefined });
-  const d = await r.json().catch(()=>({}));
-  if(!r.ok || !d.success) throw new Error(d.error || 'Request failed');
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + getAdminToken()
+  };
+
+  const r = await fetch('/api/admin/' + path, {
+    method: opts.method || 'GET',
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+
+  const d = await r.json().catch(() => ({}));
+
+  if (!r.ok || !d.success) {
+    throw new Error(d.error || 'Request failed');
+  }
+
   return d;
 }
 
@@ -67,10 +83,13 @@ export default function Applicants(){
     <section className="admin-card staff-list-card"><div className="admin-card-title"><div><h2>Applicant Register</h2><span>Search by application, name, mobile, vehicle or dealer</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
       <div style={{padding:'14px 0'}}><input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔎 Search applicant name / mobile / application / vehicle / dealer" /></div>
       <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Application</th><th>Applicant</th><th>Vehicle</th><th>Dealer</th><th>Loan</th><th>Workflow — Current / Next</th><th>Actions</th></tr></thead><tbody>
-        {loading?<tr><td colSpan="7" className="empty-cell">Loading applicants…</td></tr>:filtered.length===0?<tr><td colSpan="7" className="empty-cell">No applicants found.</td></tr>:filtered.map(a=><tr key={a.id}><td><strong>{a.application_no||'—'}</strong><div className="muted">{a.loan_account_no||'No loan account'}</div></td><td><strong>{a.customer?.full_name||'—'}</strong><div className="muted">{a.customer?.phone||'—'}</div></td><td>{a.vehicle_model?.model_name||'—'}<div className="muted">{a.vehicle_no||'No vehicle no.'}</div></td><td>{a.dealer?.dealer_name||'—'}</td><td>{money(a.loan_amount_requested)}<div className="muted">{a.tenure_months||'—'} months</div></td><td><Workflow app={a}/></td><td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button className="admin-btn small" onClick={()=>setView(a)}>View</button><button className="admin-btn small secondary" onClick={()=>startEdit(a)}>Edit</button></div></td></tr>)}
+        {loading?<tr><td colSpan="7" className="empty-cell">Loading applicants…</td></tr>:filtered.length===0?<tr><td colSpan="7" className="empty-cell">No applicants found.</td></tr>:filtered.map(a=><tr key={a.id}><td><strong>{a.application_no||'—'}</strong><div className="muted">{a.loan_account_no||'No loan account'}</div></td><td><strong>{a.customer?.full_name||'—'}</strong><div className="muted">{a.customer?.phone||'—'}</div></td><td>{a.vehicle_model?.model_name||'—'}<div className="muted">{a.vehicle_no||'No vehicle no.'}</div></td><td>{a.dealer?.dealer_name||'—'}</td><td className="num">{money(a.loan_amount_requested)}<div className="muted">{a.tenure_months||'—'} months</div></td><td><Workflow app={a}/></td><td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button className="admin-btn small" onClick={()=>setView(a)}>View</button><button className="admin-btn small secondary" onClick={()=>startEdit(a)}>Edit</button></div></td></tr>)}
       </tbody></table></div>
     </section>
-    {view&&<div className="admin-modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setView(null)}><div className="admin-modal large"><div className="admin-modal-head"><div><div className="admin-eyebrow">APPLICANT DETAIL</div><h2>{view.customer?.full_name||'Applicant'}</h2><span>{view.application_no} · {statusLabel(view.application_status)}</span></div><button className="admin-btn secondary" onClick={()=>setView(null)}>✕</button></div><div className="detail-grid">{[['Application',view.application_no],['Loan Account',view.loan_account_no],['Name',view.customer?.full_name],['Mobile',view.customer?.phone],['Email',view.customer?.email],['DOB',view.customer?.dob],['Address',view.customer?.address],['City / State',`${view.customer?.city||'—'} / ${view.customer?.state||'—'}`],['PAN',view.customer?.pan],['Vehicle',view.vehicle_model?.model_name],['Vehicle No.',view.vehicle_no],['Loan Amount',money(view.loan_amount_requested)],['Tenure',view.tenure_months],['EMI',money(view.emi_amount)],['Dealer',view.dealer?.dealer_name],['FI',view.fi_executive_name],['CIBIL',view.cibil_score],['Case Status',statusLabel(view.case_status)]] .map(([k,v])=><div key={k}><small>{k}</small><strong>{v||'—'}</strong></div>)}</div><div style={{marginTop:18}}><Workflow app={view}/></div><div className="admin-modal-actions"><button className="admin-btn" onClick={()=>startEdit(view)}>✎ Edit Applicant</button><button className="admin-btn secondary" onClick={()=>setView(null)}>Close</button></div></div></div>}
+    {view&&<div className="admin-modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setView(null)}><div className="admin-modal large"><div className="admin-modal-head"><div><div className="admin-eyebrow">APPLICANT DETAIL</div><h2>{view.customer?.full_name||'Applicant'}</h2><span>{view.application_no} · {statusLabel(view.application_status)}</span></div><button className="admin-btn secondary" onClick={()=>setView(null)}>✕</button></div><div className="admin-alert" style={{marginBottom:16}}><strong>Loan Flow</strong><Workflow app={view}/></div><div className="detail-grid">{[['Application',view.application_no],['Loan Account',view.loan_account_no],['Name',view.customer?.full_name],['Mobile',view.customer?.phone],['Email',view.customer?.email],['DOB',view.customer?.dob],['Address',view.customer?.address],['City / State',String(view.customer?.city||'�') + ' / ' + String(view.customer?.state||'�')],['PAN',view.customer?.pan],['Vehicle',view.vehicle_model?.model_name],['Vehicle No.',view.vehicle_no],['Loan Amount',money(view.loan_amount_requested)],['Tenure',view.tenure_months],['EMI',money(view.emi_amount)],['Dealer',view.dealer?.dealer_name],['FI',view.fi_executive_name],['CIBIL',view.cibil_score],['Case Status',statusLabel(view.case_status)]] .map(([k,v])=><div key={k}><small>{k}</small><strong>{v||'—'}</strong></div>)}</div><div className="admin-modal-actions"><button className="admin-btn" onClick={()=>startEdit(view)}>✎ Edit Applicant</button><button className="admin-btn secondary" onClick={()=>setView(null)}>Close</button></div></div></div>}
     {editing&&<div className="admin-modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setEditing(null)}><form className="admin-modal large" onSubmit={save}><div className="admin-modal-head"><div><div className="admin-eyebrow">EDIT APPLICANT</div><h2>{editing.customer?.full_name||'Applicant'}</h2><span>{editing.loan?.application_no}</span></div><button type="button" className="admin-btn secondary" onClick={()=>setEditing(null)}>✕</button></div><div className="modal-section-title">Applicant Details</div><div className="form-grid"><div><label>Name</label><input value={editing.customer?.full_name||''} onChange={e=>setC('full_name',e.target.value)} required/></div><div><label>Mobile</label><input value={editing.customer?.phone||''} onChange={e=>setC('phone',e.target.value)} required/></div><div><label>Email</label><input type="email" value={editing.customer?.email||''} onChange={e=>setC('email',e.target.value)}/></div><div><label>DOB</label><input type="date" value={editing.customer?.dob||''} onChange={e=>setC('dob',e.target.value)}/></div><div><label>PAN</label><input value={editing.customer?.pan||''} onChange={e=>setC('pan',e.target.value.toUpperCase())}/></div><div><label>Pincode</label><input value={editing.customer?.pincode||''} onChange={e=>setC('pincode',e.target.value)}/></div><div className="full"><label>Address</label><textarea rows="3" value={editing.customer?.address||''} onChange={e=>setC('address',e.target.value)}/></div><div><label>City</label><input value={editing.customer?.city||''} onChange={e=>setC('city',e.target.value)}/></div><div><label>State</label><input value={editing.customer?.state||''} onChange={e=>setC('state',e.target.value)}/></div><div><label>Occupation</label><input value={editing.customer?.occupation||''} onChange={e=>setC('occupation',e.target.value)}/></div><div><label>Monthly Income</label><input type="number" value={editing.customer?.monthly_income||''} onChange={e=>setC('monthly_income',e.target.value)}/></div></div><div className="modal-section-title">Application / Loan Details</div><div className="form-grid"><div><label>Vehicle No.</label><input value={editing.loan?.vehicle_no||''} onChange={e=>setL('vehicle_no',e.target.value.toUpperCase())}/></div><div><label>Chassis No.</label><input value={editing.loan?.chassis_no||''} onChange={e=>setL('chassis_no',e.target.value.toUpperCase())}/></div><div><label>Loan Amount</label><input type="number" value={editing.loan?.loan_amount_requested||''} onChange={e=>setL('loan_amount_requested',e.target.value)}/></div><div><label>Tenure (Months)</label><input type="number" value={editing.loan?.tenure_months||''} onChange={e=>setL('tenure_months',e.target.value)}/></div><div><label>Ledger No.</label><input value={editing.loan?.ledger_no||''} onChange={e=>setL('ledger_no',e.target.value)}/></div><div><label>File No.</label><input value={editing.loan?.file_no||''} onChange={e=>setL('file_no',e.target.value)}/></div><div><label>FI Executive</label><input value={editing.loan?.fi_executive_name||''} onChange={e=>setL('fi_executive_name',e.target.value)}/></div><div><label>FI Status</label><input value={editing.loan?.fi_status||''} onChange={e=>setL('fi_status',e.target.value)}/></div><div><label>Application Status</label><select value={editing.loan?.application_status||'draft'} onChange={e=>setL('application_status',e.target.value)}>{['draft','submitted','fi_pending','fi_done','approved','rejected','sanctioned','disbursed'].map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div><div><label>Case Status</label><select value={editing.loan?.case_status||'active'} onChange={e=>setL('case_status',e.target.value)}>{['active','suit_filed','vehicle_seized','closed','written_off'].map(s=><option key={s} value={s}>{statusLabel(s)}</option>)}</select></div><div><label>Disbursement Date</label><input type="date" value={editing.loan?.disbursement_date||''} onChange={e=>setL('disbursement_date',e.target.value)}/></div><div><label>Disbursed Amount</label><input type="number" value={editing.loan?.disbursed_amount||''} onChange={e=>setL('disbursed_amount',e.target.value)}/></div></div><div className="admin-modal-actions"><button className="admin-btn" disabled={saving}>{saving?'Saving…':'✓ Save Applicant'}</button><button type="button" className="admin-btn secondary" onClick={()=>setEditing(null)}>Cancel</button></div></form></div>}
   </div>
 }
+
+
+

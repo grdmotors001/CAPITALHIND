@@ -1,0 +1,204 @@
+{
+    "$schema":  "https://openapi.vercel.sh/vercel.json",
+    "version":  2,
+    "builds":  [
+                   {
+                       "src":  "backend/api/admin.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/dealer.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/do.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/field-executive.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/grd-submit-loan.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/grd.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/misc.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/workflow/available-loans.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/workflow/deliveries.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   },
+                   {
+                       "src":  "backend/api/workflow/sales.js",
+                       "use":  "@vercel/node",
+                       "config":  {
+                                      "includeFiles":  [
+                                                           "backend/lib/**",
+                                                           "backend/api/**"
+                                                       ]
+                                  }
+                   }
+               ],
+    "routes":  [
+                   {
+                       "src":  "/api/grd/(.*)",
+                       "dest":  "/backend/api/grd.js?path=$1"
+                   },
+                   {
+                       "src":  "/api/grd",
+                       "dest":  "/backend/api/grd.js"
+                   },
+                   {
+                       "src":  "/api/grd-submit-loan",
+                       "dest":  "/backend/api/grd-submit-loan.js"
+                   },
+                   {
+                       "src":  "/api/dealer/grd-submit-loan",
+                       "dest":  "/backend/api/dealer.js?path=grd-submit-loan"
+                   },
+                   {
+                       "src":  "/admin/react-login\\.php",
+                       "dest":  "/backend/api/admin.js?path=login"
+                   },
+                   {
+                       "src":  "/api/admin/react-login\\.php",
+                       "dest":  "/backend/api/admin.js?path=login"
+                   },
+                   {
+                       "src":  "/api/admin/(.*)",
+                       "dest":  "/backend/api/admin.js?path=$1"
+                   },
+                   {
+                       "src":  "/api/collection/(.*)",
+                       "dest":  "/backend/api/misc.js?path=collection/$1"
+                   },
+                   {
+                       "src":  "/api/customer/(.*)",
+                       "dest":  "/backend/api/misc.js?path=customer/$1"
+                   },
+                   {
+                       "src":  "/api/dealer/(.*)",
+                       "dest":  "/backend/api/dealer.js?path=$1"
+                   },
+                   {
+                       "src":  "/api/do/(.*)",
+                       "dest":  "/backend/api/do.js?path=$1"
+                   },
+                   {
+                       "src":  "/api/field-executive/(.*)",
+                       "dest":  "/backend/api/field-executive.js?path=$1"
+                   },
+                   {
+                       "src":  "/api/team-leader/(.*)",
+                       "dest":  "/backend/api/misc.js?path=team-leader/$1"
+                   },
+                   {
+                       "src":  "/api/tele-caller/(.*)",
+                       "dest":  "/backend/api/misc.js?path=tele-caller/$1"
+                   },
+                   {
+                       "src":  "/api/users/(.*)",
+                       "dest":  "/backend/api/misc.js?path=users/$1"
+                   },
+                   {
+                       "src":  "/api/staff/(.*)",
+                       "dest":  "/backend/api/misc.js?path=staff/$1"
+                   },
+                   {
+                       "src":  "/api/workflow/available-loans",
+                       "dest":  "/backend/api/workflow/available-loans.js"
+                   },
+                   {
+                       "src":  "/api/workflow/deliveries",
+                       "dest":  "/backend/api/workflow/deliveries.js"
+                   },
+                   {
+                       "src":  "/api/workflow/sales",
+                       "dest":  "/backend/api/workflow/sales.js"
+                   }
+               ],
+    "headers":  [
+                    {
+                        "source":  "/",
+                        "headers":  [
+                                        {
+                                            "key":  "Cache-Control",
+                                            "value":  "no-store, max-age=0"
+                                        }
+                                    ]
+                    },
+                    {
+                        "source":  "/index.html",
+                        "headers":  [
+                                        {
+                                            "key":  "Cache-Control",
+                                            "value":  "no-store, max-age=0"
+                                        }
+                                    ]
+                    }
+                ]
+}
