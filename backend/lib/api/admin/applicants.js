@@ -43,10 +43,10 @@ export default async function handler(req, res) {
         fi_received_date, fi_status, fi_executive_name, sanction_date, approved_by, file_received_date, file_check_date,
         interest_rate, interest_amount, principal_amount, emi_no, emi_amount, vehicle_registration_date,
         customer_profiles(*), dealer_master(dealer_name,dealer_code,city,state,contact_phone,contact_email),
-        lifecycle_status, tvr_status, vehicle_model_master(id,model_name,vehicle_type,ex_showroom_price,battery_capacity,oem_id)
+        lifecycle_status, tvr_status, loan_tvrs(status), vehicle_model_master(id,model_name,vehicle_type,ex_showroom_price,battery_capacity,oem_id)
       `).order('created_at', { ascending: false }).limit(500);
       if (error) { console.error('[admin/applicants GET]', error.message); return sendError(res, 500, 'Could not load applicants.'); }
-      const rows = data || [];
+      const rows = (data || []).map((row) => ({ ...row, tvr_status: row.loan_tvrs?.status === 'verified' ? 'verified' : row.tvr_status }));
       const ids = rows.map(r => r.id);
       const [gRes, cbRes] = await Promise.all([
         ids.length ? s.from('guarantor_details').select('*').in('loan_application_id', ids) : Promise.resolve({data:[],error:null}),
