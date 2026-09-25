@@ -187,7 +187,9 @@ export default function LoanApplications() {
                 <td>{fmt(a.submitted_at)}</td>
                 <td>{tab==='grd'
                   ? <span className="muted">View only</span>
-                  : <Link className="admin-btn small secondary" to="/app/admin/assign">Open</Link>}</td>
+                  : st.key==='bill'
+                    ? <Link className="admin-btn small" to="/app/admin/create-loan">Open / Start EMI</Link>
+                    : <Link className="admin-btn small secondary" to="/app/admin/assign">Open</Link>}</td>
               </tr>;
             })}
           </tbody>
