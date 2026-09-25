@@ -16,6 +16,7 @@ export default async function handler(req, res) {
         id, application_no, loan_account_no, application_status,
         loan_amount_requested, tenure_months, vehicle_price, down_payment,
         submitted_at, created_at, physical_register_serial_no, approval_valid_until, approved_at, tvr_status,
+        loan_type, hypothecation, interest_rate, sanction_date, do_no,
         customer_profiles ( full_name, phone, email, address, city, state, pincode, pan, occupation, monthly_income ),
         vehicle_model_master ( model_name ),
         dealer_master ( dealer_name )
@@ -43,6 +44,8 @@ export default async function handler(req, res) {
       physical_register_serial_no: row.physical_register_serial_no,
       approval_valid_until: row.approval_valid_until,
       approved_at: row.approved_at, tvr_status: row.tvr_status,
+      loan_type: row.loan_type || null, hypothecation: row.hypothecation || null,
+      interest_rate: row.interest_rate ?? null, sanction_date: row.sanction_date || null, do_no: row.do_no || null,
       customer: row.customer_profiles || null,
       vehicle_model: row.vehicle_model_master?.model_name || null,
       dealer_name: row.dealer_master?.dealer_name || null,
