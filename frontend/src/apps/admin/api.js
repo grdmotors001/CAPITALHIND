@@ -145,6 +145,28 @@ export function createManualLoan(payload) {
   return usersRequest('create-manual-loan', { method: 'POST', body: payload });
 }
 
+export function createAdminLoanApplication(payload) {
+  return usersRequest('create-loan-application', { method: 'POST', body: payload });
+}
+
+export function uploadAdminKycDocument({ loanApplicationId, customerId, docType, file }) {
+  const token = getAdminToken();
+  const body = new FormData();
+  body.append('loan_application_id', String(loanApplicationId));
+  body.append('customer_id', String(customerId));
+  body.append('doc_type', docType);
+  body.append('file', file);
+  return fetch(`${AUTH_API_BASE}/upload-kyc-document`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body,
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) throw new Error(data.error || 'KYC upload failed');
+    return data;
+  });
+}
+
 export function createGrdTestApproved() {
   return usersRequest('create-grd-test-approved', { method: 'POST' });
 }
