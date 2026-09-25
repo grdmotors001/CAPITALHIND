@@ -147,7 +147,11 @@ export default async function handler(req, res) {
     if (existingErr) return sendError(res, 500, 'Could not validate loan account number.');
     if (existing) return sendError(res, 409, 'Loan account number already exists.');
 
-    const loanId = crypto.randomUUID();
+    // emi_schedule.loan_id and loan_disbursement_events.loan_id are BIGINT
+    // foreign keys to loan_applications.id. emi_loan_id remains the UUID
+    // generated above as the separate EMI-system linkage key.
+    const emiLoanId = crypto.randomUUID();
+    const loanId = application.id;
     const emiRows = buildEmiSchedule({
       loanId,
       applicationId: application.id,
@@ -175,7 +179,7 @@ export default async function handler(req, res) {
       disbursed_amount: disbursed,
       interest_rate: rate,
       first_emi_date: firstEmiDate,
-      emi_loan_id: loanId,
+      emi_loan_id: emiLoanId,
       loan_remarks: String(remarks || '').trim() || null,
       emi_no: 0,
       emi_amount: emiRows[0].emi_amount,
@@ -208,7 +212,7 @@ export default async function handler(req, res) {
     }
 
     const { error: disbErr } = await supabase.from('loan_disbursement_events').insert({
-      loan_id: loanId,
+      loan_id: application.id,
       amount: disbursed,
       disbursement_date: disbDate,
       created_by: session.user_id || null,
