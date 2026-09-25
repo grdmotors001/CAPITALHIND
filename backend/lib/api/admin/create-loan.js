@@ -179,7 +179,6 @@ export default async function handler(req, res) {
       loan_remarks: String(remarks || '').trim() || null,
       emi_no: 0,
       emi_amount: emiRows[0].emi_amount,
-      receipt_entry_manual: false,
     };
     if (ledgerValue) loanUpdate.physical_register_serial_no = ledgerValue;
 
