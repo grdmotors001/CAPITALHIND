@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   try {
     if (methodGuard(req, res, 'GET')) {
       const { data, error } = await s.from('loan_applications').select(`
-        id, application_no, application_status, loan_account_no, dealer_id, dealer_user_id, customer_id, vehicle_model_id,
+        id, application_no, application_status, lifecycle_status, tvr_status, loan_account_no, dealer_id, dealer_user_id, customer_id, vehicle_model_id,
         vehicle_price, down_payment, loan_amount_requested, tenure_months, submitted_at, created_at,
         assigned_fe_id, assigned_at, cibil_score, cibil_checked_at, approval_valid_until, approved_at,
         vehicle_no, chassis_no, ledger_no, file_no, file_record_no, cheques_qty, case_status, suit_filed_at, vehicle_seized_at,
