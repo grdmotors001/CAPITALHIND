@@ -3,6 +3,8 @@ import route_add_receipt_0 from '../lib/api/admin/add-receipt.js';
 import route_assign_fe_1 from '../lib/api/admin/assign-fe.js';
 import route_create_loan_2 from '../lib/api/admin/create-loan.js';
 import route_create_manual_loan_2b from '../lib/api/admin/create-manual-loan.js';
+import route_create_loan_application_2d from '../lib/api/admin/create-loan-application.js';
+import route_upload_kyc_document_2e from '../lib/api/admin/upload-kyc-document.js';
 import route_create_grd_test_approved_2c from '../lib/api/admin/create-grd-test-approved.js';
 import route_create_user_3 from '../lib/api/admin/create-user.js';
 import route_dashboard_stats_4 from '../lib/api/admin/dashboard-stats.js';
@@ -62,6 +64,8 @@ const routes = {
   '/assign-fe': route_assign_fe_1,
   '/create-loan': route_create_loan_2,
   '/create-manual-loan': route_create_manual_loan_2b,
+  '/create-loan-application': route_create_loan_application_2d,
+  '/upload-kyc-document': route_upload_kyc_document_2e,
   '/create-grd-test-approved': route_create_grd_test_approved_2c,
   '/create-user': route_create_user_3,
   '/dashboard-stats': route_dashboard_stats_4,
