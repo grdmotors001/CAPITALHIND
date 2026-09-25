@@ -1,6 +1,8 @@
 // POST /api/admin/create-loan
-// Converts one approved application into a loan account.
-// Body: { loan_application_id, loan_account_no? }
+// Converts one approved application into an active loan account and starts
+// its EMI schedule. Customer/dealer/application details come from the
+// approved loan application; this endpoint only accepts the remaining
+// physical-file, disbursement and EMI-start fields from the Create Loan form.
 import { getSupabase } from '../_lib/supabase.js';
 import { requireAdminAuth, sendError, methodGuard } from '../_lib/auth.js';
 
@@ -9,55 +11,96 @@ function makeAccountNo(count) {
   return `CHF-${year}-LN-${String(count + 1).padStart(5, '0')}`;
 }
 
+function dateOnly(value) {
+  return String(value || '').slice(0, 10);
+}
+
+function addMonths(dateString, months) {
+  const [y, m, d] = dateString.split('-').map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+function buildEmiSchedule({ loanId, applicationId, amount, tenure, annualRate, firstEmiDate }) {
+  const principal = Number(amount);
+  const n = Number(tenure);
+  const rate = Number(annualRate || 0) / 100 / 12;
+  if (!(principal > 0) || !(n > 0) || !firstEmiDate) return [];
+
+  let emi = rate > 0
+    ? principal * rate * Math.pow(1 + rate, n) / (Math.pow(1 + rate, n) - 1)
+    : principal / n;
+  emi = Number(emi.toFixed(2));
+
+  let opening = principal;
+  const rows = [];
+  for (let i = 1; i <= n; i += 1) {
+    const interest = rate > 0 ? Number((opening * rate).toFixed(2)) : 0;
+    const principalPart = i === n
+      ? Number(opening.toFixed(2))
+      : Number(Math.min(opening, Math.max(0, emi - interest)).toFixed(2));
+    const payment = Number((principalPart + interest).toFixed(2));
+    const closing = Number(Math.max(0, opening - principalPart).toFixed(2));
+    rows.push({
+      loan_id: loanId,
+      loan_application_id: applicationId,
+      emi_no: i,
+      due_date: addMonths(firstEmiDate, i - 1),
+      emi_amount: payment,
+      principal_amount: principalPart,
+      interest_amount: interest,
+      opening_balance: Number(opening.toFixed(2)),
+      closing_balance: closing,
+      paid_amount: 0,
+      status: 'PENDING',
+    });
+    opening = closing;
+  }
+  return rows;
+}
+
 export default async function handler(req, res) {
   if (!methodGuard(req, res, 'POST')) return;
   const session = requireAdminAuth(req, res);
   if (!session) return;
 
+  const supabase = getSupabase();
+
   try {
     const {
-      loan_application_id, loan_account_no, vehicle_no, chassis_no, ledger_no, file_no,
-      cheques_qty, file_record_no, case_status, disbursement_date, disbursed_amount
+      loan_application_id,
+      vehicle_no,
+      chassis_no,
+      engine_no,
+      ledger_no,
+      file_no,
+      cheques_qty,
+      file_record_no,
+      case_status,
+      disbursement_date,
+      disbursed_amount,
+      interest_rate,
+      first_emi_date,
+      remarks,
     } = req.body || {};
-    if (req.body?.manual) {
-      const dealer = String(req.body.dealer || '').trim();
-      const customer = String(req.body.customer || '').trim();
-      const phone = String(req.body.phone || '').trim();
-      const loanAmount = Number(req.body.loan_amount || 0);
-      if (!dealer || !customer || !phone || !loanAmount) return sendError(res, 422, 'Dealer, customer, mobile and loan amount are required.');
-      const { count } = await supabase.from('loan_applications').select('id',{count:'exact',head:true});
-      const applicationNo = `CHF-M-${new Date().getFullYear()}-${String((count||0)+1).padStart(5,'0')}`;
-      const accountNo = `CHF-${new Date().getFullYear()}-LN-${String((count||0)+1).padStart(5,'0')}`;
-      const { data, error } = await supabase.from('loan_applications').insert({
-        application_no: applicationNo, loan_account_no: accountNo, application_status:'sanctioned',
-        dealer_name: dealer, customer_name: customer, customer_phone: phone,
-        vehicle_model: req.body.model || null, vehicle_price: Number(req.body.vehicle_price||0)||null,
-        down_payment: Number(req.body.down_payment||0)||null, loan_amount_requested: loanAmount,
-        tenure_months: Number(req.body.tenure||36), loan_type:req.body.loan_type||'NEW',
-        financer_name:req.body.financer||null, vehicle_no:req.body.vehicle_no||null,
-        chassis_no:req.body.chassis_no||null, disbursement_date:req.body.disbursement_date||null,
-        disbursed_amount:Number(req.body.disbursed_amount||0)||null, tvr_status:'verified'
-      }).select().single();
-      if(error){console.error('[admin/create-loan/manual]',error.message);return sendError(res,500,'Could not create manual loan.');}
-      return res.status(200).json({success:true,message:`Manual loan created. Account No: ${accountNo}`,loan:data});
-    }
 
-    if (!loan_application_id) return sendError(res, 422, 'loan_application_id is required');
+    if (!loan_application_id) return sendError(res, 422, 'Approved loan application select karein.');
 
-    const supabase = getSupabase();
     const { data: application, error: appErr } = await supabase
       .from('loan_applications')
-      .select('id, application_no, application_status, loan_account_no, approval_valid_until, tvr_status')
+      .select('id, application_no, application_status, loan_account_no, approval_valid_until, tvr_status, loan_amount_requested, tenure_months, interest_rate, first_emi_date, emi_loan_id')
       .eq('id', loan_application_id)
       .maybeSingle();
 
     if (appErr) {
-      console.error('[admin/create-loan]', appErr.message);
+      console.error('[admin/create-loan] load application', appErr.message);
       return sendError(res, 500, 'Could not load approved application.');
     }
     if (!application) return sendError(res, 404, 'Application not found.');
     if (application.application_status !== 'approved') {
-      return sendError(res, 422, `Only approved applications can be created as loans. Current status: ${application.application_status}`);
+      return sendError(res, 422, `Only approved applications can be activated. Current status: ${application.application_status}`);
     }
     if (application.tvr_status !== 'verified') {
       return sendError(res, 422, `TVR is not verified. Current TVR status: ${application.tvr_status || 'pending'}.`);
@@ -65,18 +108,32 @@ export default async function handler(req, res) {
     if (application.approval_valid_until && application.approval_valid_until < new Date().toISOString().slice(0, 10)) {
       return sendError(res, 422, `Approval validity expired on ${application.approval_valid_until}. Re-approval is required.`);
     }
-    if (application.loan_account_no) {
-      return res.status(409).json({ success: false, error: `Loan already created: ${application.loan_account_no}` });
+    if (application.loan_account_no || application.emi_loan_id) {
+      return res.status(409).json({ success: false, error: `Loan already created: ${application.loan_account_no || 'EMI loan already exists'}` });
     }
 
-    let accountNo = String(loan_account_no || '').trim();
+    const rate = interest_rate !== undefined && interest_rate !== '' ? Number(interest_rate) : Number(application.interest_rate || 0);
+    if (!Number.isFinite(rate) || rate < 0) return sendError(res, 422, 'Valid annual interest rate is required.');
+    const tenure = Number(application.tenure_months || 0);
+    if (!Number.isInteger(tenure) || tenure <= 0) return sendError(res, 422, 'Approved loan tenure is invalid.');
+
+    const disbDate = dateOnly(disbursement_date) || new Date().toISOString().slice(0, 10);
+    const firstEmiDate = dateOnly(first_emi_date);
+    if (!firstEmiDate) return sendError(res, 422, 'First EMI Date is required.');
+
+    const disbursed = disbursed_amount !== undefined && disbursed_amount !== ''
+      ? Number(disbursed_amount)
+      : Number(application.loan_amount_requested || 0);
+    if (!(disbursed > 0)) return sendError(res, 422, 'Disbursed Amount must be greater than zero.');
+
+    let accountNo = String(application.loan_account_no || '').trim();
     if (!accountNo) {
       const { count, error: countErr } = await supabase
         .from('loan_applications')
         .select('id', { count: 'exact', head: true })
         .not('loan_account_no', 'is', null);
       if (countErr) {
-        console.error('[admin/create-loan]', countErr.message);
+        console.error('[admin/create-loan] account count', countErr.message);
         return sendError(res, 500, 'Could not generate loan account number.');
       }
       accountNo = makeAccountNo(count || 0);
@@ -87,58 +144,105 @@ export default async function handler(req, res) {
       .select('id')
       .eq('loan_account_no', accountNo)
       .maybeSingle();
-    if (existingErr) {
-      console.error('[admin/create-loan]', existingErr.message);
-      return sendError(res, 500, 'Could not validate loan account number.');
-    }
+    if (existingErr) return sendError(res, 500, 'Could not validate loan account number.');
     if (existing) return sendError(res, 409, 'Loan account number already exists.');
+
+    const loanId = crypto.randomUUID();
+    const emiRows = buildEmiSchedule({
+      loanId,
+      applicationId: application.id,
+      amount: Number(application.loan_amount_requested || 0),
+      tenure,
+      annualRate: rate,
+      firstEmiDate,
+    });
+    if (!emiRows.length) return sendError(res, 422, 'Could not build EMI schedule from approved loan details.');
 
     const ledgerValue = String(ledger_no || '').trim().toUpperCase();
     const loanUpdate = {
       loan_account_no: accountNo,
-      application_status: 'sanctioned',
+      application_status: 'disbursed',
+      lifecycle_status: 'ACTIVE',
       vehicle_no: String(vehicle_no || '').trim() || null,
       chassis_no: String(chassis_no || '').trim() || null,
+      engine_no: String(engine_no || '').trim() || null,
       ledger_no: ledgerValue || null,
       file_no: String(file_no || '').trim() || null,
       cheques_qty: Math.max(0, Number(cheques_qty || 0)),
       file_record_no: String(file_record_no || '').trim() || null,
       case_status: case_status || 'active',
-      disbursement_date: disbursement_date || null,
-      disbursed_amount: disbursed_amount !== undefined && disbursed_amount !== '' ? Number(disbursed_amount) : null,
-      receipt_entry_manual: false
+      disbursement_date: disbDate,
+      disbursed_amount: disbursed,
+      interest_rate: rate,
+      first_emi_date: firstEmiDate,
+      emi_loan_id: loanId,
+      loan_remarks: String(remarks || '').trim() || null,
+      emi_no: 0,
+      emi_amount: emiRows[0].emi_amount,
+      receipt_entry_manual: false,
     };
     if (ledgerValue) loanUpdate.physical_register_serial_no = ledgerValue;
 
-    const { data: updated, error: updateErr } = await supabase
+    const { error: updateErr } = await supabase
       .from('loan_applications')
       .update(loanUpdate)
-      .eq('id', loan_application_id)
-      .eq('application_status', 'approved')
-      .select('id, application_no, loan_account_no, application_status, vehicle_no, chassis_no, ledger_no, file_no, cheques_qty, file_record_no, case_status, approval_valid_until')
-      .single();
+      .eq('id', application.id)
+      .eq('application_status', 'approved');
 
     if (updateErr) {
-      console.error('[admin/create-loan]', updateErr.message);
-      return sendError(res, 500, 'Could not create loan account.');
+      console.error('[admin/create-loan] loan update', updateErr.message);
+      return sendError(res, 500, 'Could not activate loan account.');
     }
 
+    const { error: scheduleErr } = await supabase.from('emi_schedule').insert(emiRows);
+    if (scheduleErr) {
+      console.error('[admin/create-loan] EMI schedule', scheduleErr.message);
+      await supabase.from('loan_applications').update({
+        loan_account_no: null,
+        application_status: 'approved',
+        lifecycle_status: 'APPROVED',
+        emi_loan_id: null,
+        first_emi_date: null,
+        loan_remarks: null,
+      }).eq('id', application.id);
+      return sendError(res, 500, 'Loan was not activated because EMI schedule could not be created.');
+    }
+
+    const { error: disbErr } = await supabase.from('loan_disbursement_events').insert({
+      loan_id: loanId,
+      amount: disbursed,
+      disbursement_date: disbDate,
+      created_by: session.user_id || null,
+    });
+    if (disbErr) console.warn('[admin/create-loan] disbursement event:', disbErr.message);
+
     await supabase.from('application_status_history').insert({
-      loan_application_id,
+      loan_application_id: application.id,
       from_status: 'approved',
-      to_status: 'sanctioned',
+      to_status: 'disbursed',
       changed_by: session.user_id,
       changed_by_type: 'admin',
-      remarks: `Loan account created: ${accountNo}`,
+      remarks: `Loan account ${accountNo} created and EMI schedule started.`,
+    });
+
+    await supabase.from('loan_status_history').insert({
+      loan_application_id: application.id,
+      old_status: 'APPROVED',
+      new_status: 'ACTIVE',
+      changed_by: session.user_id || null,
+      remarks: `EMI schedule started for ${accountNo}.`,
     });
 
     return res.status(200).json({
       success: true,
-      message: `Loan created successfully. Account No: ${accountNo}`,
-      loan: updated,
+      message: `Loan ${accountNo} activated and EMI schedule started.`,
+      loan_account_no: accountNo,
+      emi_count: emiRows.length,
+      first_emi_date: firstEmiDate,
+      emi_amount: emiRows[0].emi_amount,
     });
   } catch (err) {
     console.error('[admin/create-loan] unhandled', err);
-    return sendError(res, 500, 'Could not create loan account.');
+    return sendError(res, 500, 'Could not activate loan account.');
   }
 }
