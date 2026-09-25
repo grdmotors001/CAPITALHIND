@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (error) { console.error('[field-executive/list-tvr]', error.message); return sendError(res, 500, 'Could not load TVR cases.'); }
     const applications = (data || []).map(r => ({
       id:r.id, application_no:r.application_no, loan_account_no:r.loan_account_no, application_status:r.application_status,
-      tvr_status:r.tvr_status || 'pending', approved_at:r.approved_at,
+      tvr_status:(Array.isArray(r.loan_tvrs) ? (r.loan_tvrs[0]?.status || r.tvr_status) : (r.loan_tvrs?.status || r.tvr_status)) || 'pending', approved_at:r.approved_at,
       customer_name:r.customer_profiles?.full_name || null, customer_phone:r.customer_profiles?.phone || null,
       customer_address:r.customer_profiles?.address || null, customer_city:r.customer_profiles?.city || null,
       vehicle_model:r.vehicle_model_master?.model_name || null, dealer_name:r.dealer_master?.dealer_name || null,
