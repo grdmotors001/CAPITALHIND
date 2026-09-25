@@ -21,28 +21,22 @@ function Workflow({ app }) {
   const state = flowState(app);
   const currentIndex = state.rejected ? 0 : Math.max(0, FLOW.indexOf(state.current));
   return (
-    <div style={{minWidth:620}}>
-      <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:6}}>
+    <div className="wf-stepper">
+      <div className="wf-track">
         {FLOW.map((step,i) => {
           const done = !state.rejected && i < currentIndex;
           const current = !state.rejected && step === state.current;
-          return <div key={step} style={{display:'flex',alignItems:'center',flex: i === FLOW.length-1 ? '0 0 auto' : '1 1 0'}}>
-            <div title={current ? 'Current step' : done ? 'Completed' : 'Next step'} style={{
-              minWidth: current || done ? 86 : 70, padding:'5px 7px', borderRadius:7, textAlign:'center',
-              fontSize:11, fontWeight:700, lineHeight:1.15,
-              background: done ? '#dcfce7' : current ? '#16a34a' : '#f3f4f6',
-              color: done ? '#166534' : current ? '#fff' : '#6b7280',
-              border:'1px solid ' + (done ? '#86efac' : current ? '#15803d' : '#e5e7eb'),
-              boxShadow: current ? '0 0 0 2px rgba(22,163,74,.15)' : 'none'
-            }}>
-              {done ? '✓ ' : current ? '● ' : ''}{step}
+          return <div className="wf-step" key={step}>
+            <div title={current ? 'Current step' : done ? 'Completed' : 'Next step'}
+              className={'wf-pill' + (state.rejected ? ' rejected' : done ? ' done' : current ? ' current' : '')}>
+              {done ? '✓ ' : current ? '● ' : ''}{state.rejected && i===0 ? 'Rejected' : step}
             </div>
-            {i < FLOW.length-1 && <div style={{height:2,flex:1,minWidth:8,background:done ? '#86efac' : '#e5e7eb'}} />}
+            {i < FLOW.length-1 && <div className={'wf-line' + (done ? ' done' : '')} />}
           </div>;
         })}
       </div>
-      <div style={{fontSize:11,color:'#6b7280'}}>
-        <strong style={{color: state.rejected ? '#b91c1c' : '#166534'}}>{state.rejected ? 'Rejected' : 'Current: ' + state.current}</strong>
+      <div className="wf-meta">
+        <strong className={state.rejected ? 'rejected' : ''}>{state.rejected ? 'Rejected' : 'Current: ' + state.current}</strong>
         {!state.rejected && <> · Next: {state.next}</>}
         {app.tvr_status && <> · TVR: <strong>{statusLabel(app.tvr_status)}</strong></>}
       </div>
@@ -74,7 +68,7 @@ export default function Applicants(){
     <section className="admin-card staff-list-card"><div className="admin-card-title"><div><h2>Applicant Register</h2><span>Search by application, name, mobile, vehicle or dealer</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
       <div style={{padding:'14px 0'}}><input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔎 Search applicant name / mobile / application / vehicle / dealer" /></div>
       <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Application</th><th>Applicant</th><th>Vehicle</th><th>Dealer</th><th>Loan</th><th>Workflow — Current / Next</th><th>Actions</th></tr></thead><tbody>
-        {loading?<tr><td colSpan="7" className="empty-cell">Loading applicants…</td></tr>:filtered.length===0?<tr><td colSpan="7" className="empty-cell">No applicants found.</td></tr>:filtered.map(a=><tr key={a.id}><td><strong>{a.application_no||'—'}</strong><div className="muted">{a.loan_account_no||'No loan account'}</div></td><td><strong>{a.customer?.full_name||'—'}</strong><div className="muted">{a.customer?.phone||'—'}</div></td><td>{a.vehicle_model?.model_name||'—'}<div className="muted">{a.vehicle_no||'No vehicle no.'}</div></td><td>{a.dealer?.dealer_name||'—'}</td><td>{money(a.loan_amount_requested)}<div className="muted">{a.tenure_months||'—'} months</div></td><td><Workflow app={a}/></td><td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button className="admin-btn small" onClick={()=>setView(a)}>View</button><button className="admin-btn small secondary" onClick={()=>startEdit(a)}>Edit</button></div></td></tr>)}
+        {loading?<tr><td colSpan="7" className="empty-cell">Loading applicants…</td></tr>:filtered.length===0?<tr><td colSpan="7" className="empty-cell">No applicants found.</td></tr>:filtered.map(a=><tr key={a.id}><td><strong>{a.application_no||'—'}</strong><div className="muted">{a.loan_account_no||'No loan account'}</div></td><td><strong>{a.customer?.full_name||'—'}</strong><div className="muted">{a.customer?.phone||'—'}</div></td><td>{a.vehicle_model?.model_name||'—'}<div className="muted">{a.vehicle_no||'No vehicle no.'}</div></td><td>{a.dealer?.dealer_name||'—'}</td><td className="num">{money(a.loan_amount_requested)}<div className="muted">{a.tenure_months||'—'} months</div></td><td><Workflow app={a}/></td><td><div style={{display:'flex',gap:6,flexWrap:'wrap'}}><button className="admin-btn small" onClick={()=>setView(a)}>View</button><button className="admin-btn small secondary" onClick={()=>startEdit(a)}>Edit</button></div></td></tr>)}
       </tbody></table></div>
     </section>
     {view&&<div className="admin-modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setView(null)}><div className="admin-modal large"><div className="admin-modal-head"><div><div className="admin-eyebrow">APPLICANT DETAIL</div><h2>{view.customer?.full_name||'Applicant'}</h2><span>{view.application_no} · {statusLabel(view.application_status)}</span></div><button className="admin-btn secondary" onClick={()=>setView(null)}>✕</button></div><div className="admin-alert" style={{marginBottom:16}}><strong>Loan Flow</strong><Workflow app={view}/></div><div className="detail-grid">{[['Application',view.application_no],['Loan Account',view.loan_account_no],['Name',view.customer?.full_name],['Mobile',view.customer?.phone],['Email',view.customer?.email],['DOB',view.customer?.dob],['Address',view.customer?.address],['City / State',`${view.customer?.city||'—'} / ${view.customer?.state||'—'}`],['PAN',view.customer?.pan],['Vehicle',view.vehicle_model?.model_name],['Vehicle No.',view.vehicle_no],['Loan Amount',money(view.loan_amount_requested)],['Tenure',view.tenure_months],['EMI',money(view.emi_amount)],['Dealer',view.dealer?.dealer_name],['FI',view.fi_executive_name],['CIBIL',view.cibil_score],['Case Status',statusLabel(view.case_status)]] .map(([k,v])=><div key={k}><small>{k}</small><strong>{v||'—'}</strong></div>)}</div><div className="admin-modal-actions"><button className="admin-btn" onClick={()=>startEdit(view)}>✎ Edit Applicant</button><button className="admin-btn secondary" onClick={()=>setView(null)}>Close</button></div></div></div>}
