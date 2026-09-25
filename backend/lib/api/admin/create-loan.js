@@ -102,8 +102,25 @@ export default async function handler(req, res) {
     if (application.application_status !== 'approved') {
       return sendError(res, 422, `Only approved applications can be activated. Current status: ${application.application_status}`);
     }
-    if (application.tvr_status !== 'verified') {
-      return sendError(res, 422, `TVR is not verified. Current TVR status: ${application.tvr_status || 'pending'}.`);
+    let effectiveTvrStatus = application.tvr_status || 'pending';
+    if (effectiveTvrStatus !== 'verified') {
+      const { data: verifiedTvr, error: tvrSyncErr } = await supabase
+        .from('loan_tvrs')
+        .select('status')
+        .eq('loan_application_id', application.id)
+        .maybeSingle();
+      if (!tvrSyncErr && verifiedTvr?.status === 'verified') {
+        const { data: syncedApp, error: syncErr } = await supabase
+          .from('loan_applications')
+          .update({ tvr_status: 'verified' })
+          .eq('id', application.id)
+          .select('id,tvr_status')
+          .maybeSingle();
+        if (!syncErr && syncedApp?.tvr_status === 'verified') effectiveTvrStatus = 'verified';
+      }
+    }
+    if (effectiveTvrStatus !== 'verified') {
+      return sendError(res, 422, `TVR is not verified. Current TVR status: ${effectiveTvrStatus}.`);
     }
     if (application.approval_valid_until && application.approval_valid_until < new Date().toISOString().slice(0, 10)) {
       return sendError(res, 422, `Approval validity expired on ${application.approval_valid_until}. Re-approval is required.`);
