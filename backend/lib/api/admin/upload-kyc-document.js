@@ -34,7 +34,7 @@ export default async function handler(req,res) {
     const fileBuffer=fs.readFileSync(file.filepath);
     const {error:uploadErr}=await supabase.storage.from(BUCKET).upload(storagePath,fileBuffer,{contentType:file.mimetype,upsert:false});
     if (uploadErr) throw uploadErr;
-    const {data:docRow,error:insertErr}=await supabase.from('kyc_documents').insert({loan_application_id:loanApplicationId,customer_id:customerId,doc_type:docType,file_path:storagePath,file_name:file.originalFilename||safeName,uploaded_by:session.user_id}).select('id').single();
+    const {data:docRow,error:insertErr}=await supabase.from('kyc_documents').insert({loan_application_id:loanApplicationId,customer_id:customerId,doc_type:docType,file_path:storagePath,file_name:file.originalFilename||safeName,uploaded_by:null}).select('id').single();
     if (insertErr) throw insertErr;
     return res.status(200).json({success:true,kyc_document_id:docRow.id,doc_type:docType});
   } catch(e) { console.error('[admin/upload-kyc-document]',e.message||e); return sendError(res,500,'Could not process document upload'); }
