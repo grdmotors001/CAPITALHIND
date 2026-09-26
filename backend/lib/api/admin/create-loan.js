@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 ﻿// POST /api/admin/create-loan
 // Converts one approved application into an active loan account and starts
 // its EMI schedule. Customer/dealer/application details come from the
