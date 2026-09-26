@@ -27,9 +27,12 @@ export default async function handler(req, res) {
     }).select('id').single();
     if (customerErr) throw customerErr;
     customerId = customerRow.id;
+    const { data: dealerUser, error: dealerUserErr } = await supabase.from('dealer_users').select('id').eq('dealer_id', dealerRow.id).eq('is_active', true).order('id', { ascending: true }).limit(1).maybeSingle();
+    if (dealerUserErr) throw dealerUserErr;
+    if (!dealerUser?.id) throw new Error('Selected dealer has no active dealer user.');
     const applicationNo = await generateApplicationNo(supabase);
     const { data: appRow, error: appErr } = await supabase.from('loan_applications').insert({
-      application_no: applicationNo, dealer_id: dealerRow.id, dealer_user_id: null, customer_id: customerId,
+      application_no: applicationNo, dealer_id: dealerRow.id, dealer_user_id: dealerUser.id, customer_id: customerId,
       vehicle_model_id: vehicleLoan.vehicle_model_id, vehicle_price: vehicleLoan.vehicle_price,
       down_payment: vehicleLoan.down_payment, loan_amount_requested: vehicleLoan.loan_amount_requested,
       tenure_months: vehicleLoan.tenure_months,
