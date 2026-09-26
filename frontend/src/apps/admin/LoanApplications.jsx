@@ -9,11 +9,11 @@ const statusFor = (a) => {
   if (s === 'disbursed') return { key:'disbursed', label:'Disbursed', cls:'field_executive' };
   if (s === 'fi_pending' || s === 'submitted') return { key:'fe', label:'Pending at FE', cls:'staff' };
   if (s === 'fi_done') return { key:'do', label:'Pending at DO', cls:'staff' };
-  if (s === 'approved') return { key:'bill', label:'Pending for Bill', cls:'field_executive' };
   if (s === 'approved' && tvr === 'submitted') return { key:'do', label:'Pending at DO — TVR', cls:'staff' };
   if (s === 'approved' && tvr === 'hold') return { key:'tvr', label:'TVR On Hold', cls:'staff' };
   if (s === 'approved' && tvr === 'failed') return { key:'tvr', label:'TVR Failed', cls:'staff' };
   if (s === 'approved' && tvr === 'verified') return { key:'ready', label:'TVR Verified — Ready for Disbursement', cls:'field_executive' };
+  if (s === 'approved') return { key:'bill', label:'Pending for Bill', cls:'field_executive' };
   return { key:'other', label:s.replaceAll('_',' ') || 'Pending', cls:'staff' };
 };
 
