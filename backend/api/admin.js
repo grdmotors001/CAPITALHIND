@@ -36,6 +36,7 @@ import route_masters_update_loan_type_27 from '../lib/api/admin/masters/update-l
 import route_masters_update_oem_28 from '../lib/api/admin/masters/update-oem.js';
 import route_masters_update_vehicle_model_29 from '../lib/api/admin/masters/update-vehicle-model.js';
 import route_payment_vouchers_30 from '../lib/api/admin/payment-vouchers.js';
+import route_payment_receivable_30b from '../lib/api/admin/payment-receivable.js';
 import route_receipt_loans_31 from '../lib/api/admin/receipt-loans.js';
 import route_receipts_32 from '../lib/api/admin/receipts.js';
 import route_staff_create_33 from '../lib/api/admin/staff/create.js';
@@ -97,6 +98,7 @@ const routes = {
   '/masters/update-oem': route_masters_update_oem_28,
   '/masters/update-vehicle-model': route_masters_update_vehicle_model_29,
   '/payment-vouchers': route_payment_vouchers_30,
+  '/payment-receivable': route_payment_receivable_30b,
   '/receipt-loans': route_receipt_loans_31,
   '/receipts': route_receipts_32,
   '/staff/create': route_staff_create_33,
