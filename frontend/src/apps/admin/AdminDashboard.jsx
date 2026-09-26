@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { clearCurrentUser } from '../../utils/session';
 import { getStoredSidebarCollapsed, setSidebarCollapsed } from '../../utils/theme';
-import { clearAdminToken, exportCibilData, getDashboardStats } from './api';
+import { clearAdminToken, exportCibilData, getDashboardStats, getPaymentReceivable } from './api';
 import ManageAccounts from './ManageAccounts';
 import AssignApplications from './AssignApplications';
 import CreateLoan from './CreateLoan';
@@ -124,45 +124,57 @@ export default function AdminDashboard() {
 }
 
 function AdminHome() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
-  useEffect(() => { getDashboardStats().then(setData).catch(e => setError(e.message || 'Could not load dashboard')); }, []);
-  const max = Math.max(1, ...(data?.months || []).map(m => Math.max(m.applied,m.approved,m.rejected,m.disbursement,m.seized)));
-  return (
-    <div className="admin-page">
-      <div className="admin-page-head"><div><div className="admin-eyebrow">CONTROL CENTER</div><h1>Admin Dashboard</h1><p>Loan workflow, collection and staff payment overview.</p></div></div>
-      {error && <div className="admin-alert error">⚠ {error}</div>}
-      <div className="admin-home-grid">
-        <Link to="accounts" className="admin-home-card"><span>♟</span><div><h3>Manage Accounts</h3><p>Dealer aur sabhi Team Users — Admin, Field Executive, Tele Caller, DO aur Team Leader — ek hi jagah manage karein.</p></div><b>→</b></Link>
-        <Link to="assign" className="admin-home-card"><span>➤</span><div><h3>Assign Applications</h3><p>CIBIL score check karke Field Executive ko FI assign karein.</p></div><b>→</b></Link>
-        <Link to="create-loan" className="admin-home-card"><span>▣</span><div><h3>Create Loan</h3><p>Approved application se complete loan entry create karein.</p></div><b>→</b></Link>
-        <Link to="manual-create-loan" className="admin-home-card"><span>✚</span><div><h3>Manual Create Loan</h3><p>Admin se direct loan application create karein; dealer manually enter hoga.</p></div><b>→</b></Link>
-        <Link to="receipts" className="admin-home-card"><span>▤</span><div><h3>Receipts</h3><p>Loan select karke amount/date se receipt entry aur loan detail PDF print karein.</p></div><b>→</b></Link>
-        <Link to="payment-receivable" className="admin-home-card"><span>₹</span><div><h3>Payment Receivable</h3><p>EMI outstanding, overdue aur aaj ki receivable amount ek jagah dekhein.</p></div><b>→</b></Link>
-        <Link to="payment-vouchers" className="admin-home-card"><span>₹</span><div><h3>Payment Vouchers</h3><p>Tele Caller, FE aur other incentives/payments record karein.</p></div><b>→</b></Link>
-        <Link to="loan-cases" className="admin-home-card"><span>▤</span><div><h3>Loan Cases</h3><p>Active, suit filed, vehicle seized aur file/ledger details manage karein.</p></div><b>→</b></Link>
-        <Link to="masters" className="admin-home-card"><span>☰</span><div><h3>Masters</h3><p>HP, OEM and Battery master data.</p></div><b>→</b></Link>
-        <Link to="reports" className="admin-home-card"><span>▤</span><div><h3>Reports</h3><p>Day Book, collections, expenses, NOC, repo and loan ledger reports.</p></div><b>→</b></Link>
-        <Link to="collection-risk" className="admin-home-card"><span>⚠</span><div><h3>Collection & Risk</h3><p>NPA ageing, penal/bounce config aur restructure-foreclosure requests.</p></div><b>→</b></Link>
-        <Link to="/app/accounting" className="admin-home-card"><span>▦</span><div><h3>Accounting</h3><p>Open accounting and finance module.</p></div><b>→</b></Link>
-      </div>
-      <section className="admin-card" style={{ marginTop: 24 }}>
-        <div className="admin-card-title"><div><h2>Collection & Loan Dashboard</h2><span>Monthly applied, approved, rejected, disbursement and vehicle seizure</span></div></div>
-        <div className="dealer-kpis" style={{ marginTop: 16 }}>
-          <div className="dealer-kpi"><span>Active Cases</span><strong>{data?.active_cases ?? '—'}</strong><small>Case status active</small></div>
-          <div className="dealer-kpi"><span>Vehicle Seized</span><strong>{data?.vehicle_seized_total ?? '—'}</strong><small>Total seized cases</small></div>
-          <div className="dealer-kpi"><span>Total Approved</span><strong>{data?.approved_total ?? '—'}</strong><small>Current approved</small></div>
-          <div className="dealer-kpi"><span>Total Disbursed</span><strong>{data?.disbursed_total ?? '—'}</strong><small>Current disbursed</small></div>
-        </div>
-        <AdminCharts months={data?.months || []} />
-        <div className="admin-month-grid">
-          {(data?.months || []).map(m => <div className="admin-month-card" key={m.month}><b>{m.month}</b><div><span>Applied <strong>{m.applied}</strong></span><i style={{width:`${Math.max(6,m.applied/max*100)}%`}} /></div><div><span>Approved <strong>{m.approved}</strong></span><i style={{width:`${Math.max(6,m.approved/max*100)}%`}} /></div><div><span>Rejected <strong>{m.rejected}</strong></span><i style={{width:`${Math.max(6,m.rejected/max*100)}%`}} /></div><div><span>Disbursed <strong>{m.disbursement}</strong></span><i style={{width:`${Math.max(6,m.disbursement/max*100)}%`}} /></div><div><span>Vehicle seized <strong>{m.seized}</strong></span><i style={{width:`${Math.max(6,m.seized/max*100)}%`}} /></div></div>)}
-        </div>
-      </section>
-      <CollectionActivity />
-      <ExportCibilCard />
+  const [data,setData]=useState(null),[receivable,setReceivable]=useState(null),[error,setError]=useState('');
+  async function load(){
+    setError('');
+    try{
+      const [d,r]=await Promise.all([getDashboardStats(),getPaymentReceivable()]);
+      setData(d); setReceivable(r);
+    }catch(e){setError(e.message||'Could not load dashboard');}
+  }
+  useEffect(()=>{load()},[]);
+  const cards=[
+    ['loan-applications','📋','Loan Applications','Complete application pipeline and current workflow status.'],
+    ['assign','➤','Assign Applications','Assign FI/Field Executive and continue the approval workflow.'],
+    ['payment-receivable','₹','Payment Receivable','Outstanding EMI, overdue and today\'s receivable amount.'],
+    ['receipts','▤','Receipts','Record customer payments and print receipts.'],
+    ['payment-vouchers','₹','Payment Vouchers','Record staff incentives and other payment vouchers.'],
+    ['loan-cases','▤','Loan Cases','Manage active cases, file/ledger and collection status.'],
+    ['repo-cases','🚗','Repo','Manage vehicle repossession records.'],
+    ['reports','▤','Reports','Day Book, collections, expenses, NOC and loan ledger reports.'],
+    ['collection-risk','⚠','Collection & Risk','Ageing, penal/bounce and collection-risk controls.'],
+    ['accounts','♟','Manage Accounts','Manage dealers, admin and operational users.'],
+    ['masters','☰','Masters','OEM, HP, battery and vehicle master data.'],
+  ];
+  return <div className="admin-page">
+    <div className="admin-page-head">
+      <div><div className="admin-eyebrow">CONTROL CENTER</div><h1>CHFPL Operations Dashboard</h1><p>One place for loan workflow, collections, receivables and daily operations.</p></div>
+      <button className="admin-btn" onClick={load}>↻ Refresh</button>
     </div>
-  );
+    {error&&<div className="admin-alert error">⚠ {error}</div>}
+    <div className="dealer-kpis">
+      <div className="dealer-kpi"><span>Total Applications</span><strong>{data?.total_applications??'—'}</strong><small>All loan applications</small></div>
+      <div className="dealer-kpi"><span>Approved</span><strong>{data?.approved_total??'—'}</strong><small>Currently approved</small></div>
+      <div className="dealer-kpi"><span>Disbursed</span><strong>{data?.disbursed_total??'—'}</strong><small>Active loan accounts</small></div>
+      <div className="dealer-kpi"><span>Overdue Receivable</span><strong>{receivable?('₹'+Number(receivable.totals.overdue||0).toLocaleString('en-IN')):'—'}</strong><small>Past-due EMI balance</small></div>
+    </div>
+    <section className="admin-card" style={{marginTop:24}}>
+      <div className="admin-card-title"><div><h2>Operations</h2><span>Open the module you need without going through multiple screens.</span></div></div>
+      <div className="admin-home-grid" style={{marginTop:16}}>
+        {cards.map(([to,icon,title,desc])=><Link key={to} to={to} className="admin-home-card"><span>{icon}</span><div><h3>{title}</h3><p>{desc}</p></div><b>→</b></Link>)}
+        <Link to="/app/accounting" className="admin-home-card"><span>▦</span><div><h3>Accounting & Finance</h3><p>Open the finance workspace and accounting reports.</p></div><b>→</b></Link>
+      </div>
+    </section>
+    <section className="admin-card" style={{marginTop:24}}>
+      <div className="admin-card-title"><div><h2>Receivable Snapshot</h2><span>Based on the EMI schedule and recorded receipts.</span></div><Link className="admin-btn secondary" to="payment-receivable">Open Register</Link></div>
+      <div className="dealer-kpis" style={{marginTop:16}}>
+        <div className="dealer-kpi"><span>Outstanding</span><strong>{receivable?('₹'+Number(receivable.totals.outstanding||0).toLocaleString('en-IN')):'—'}</strong><small>Total unpaid EMI balance</small></div>
+        <div className="dealer-kpi"><span>Overdue</span><strong>{receivable?('₹'+Number(receivable.totals.overdue||0).toLocaleString('en-IN')):'—'}</strong><small>Past due date</small></div>
+        <div className="dealer-kpi"><span>Due Today</span><strong>{receivable?('₹'+Number(receivable.totals.due_today||0).toLocaleString('en-IN')):'—'}</strong><small>Today\'s scheduled amount</small></div>
+        <div className="dealer-kpi"><span>Receipts Recorded</span><strong>{receivable?('₹'+Number(receivable.totals.received||0).toLocaleString('en-IN')):'—'}</strong><small>Receipt entries</small></div>
+      </div>
+    </section>
+  </div>;
 }
 
 function AdminCharts({ months }) {
