@@ -176,6 +176,7 @@ export function addReceipt(payload) { return usersRequest('add-receipt', { metho
 export function listReceiptLoans() { return usersRequest('receipt-loans'); }
 export function listReceipts() { return usersRequest('receipts'); }
 export function listPaymentVouchers() { return usersRequest('payment-vouchers'); }
+export function getPaymentReceivable() { return usersRequest('payment-receivable'); }
 export function createPaymentVoucher(payload) { return usersRequest('payment-vouchers', { method: 'POST', body: payload }); }
 
 // --- Masters: HP (Hypothecation) / Vehicle Model / Loan Type --------------
