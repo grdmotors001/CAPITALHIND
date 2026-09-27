@@ -97,7 +97,7 @@ export default function RepoCases(){
    <div className="admin-card-title"><div><h2>Repo Register</h2><span>Complete vehicle repossession history</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
    <div style={{padding:'14px 0'}}><input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔎 Search vehicle / customer / mobile / loan / FI / dealer" /></div>
    <div className="admin-table-wrap"><table className="admin-table">
-    <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Parked At</th></tr></thead>
+    <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Parked At</th></tr></thead>
     <tbody>
      {loading?<tr><td colSpan="12" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
