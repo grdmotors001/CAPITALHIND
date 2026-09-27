@@ -41,7 +41,21 @@ export async function resolveGrdDealer(supabase, grdDealerId, masters = null) {
   const id = String(grdDealerId || '').trim();
   if (!id) throw new Error('Dealer id is required.');
 
-  const data = masters || await fetchGrdMasters();
+  let data;
+  try {
+    data = masters || await fetchGrdMasters();
+  } catch (bridgeErr) {
+    // GRD bridge may be temporarily unavailable. Use an existing CHFPL
+    // dealer mirror linked by grd_dealer_id so admin-created applications
+    // can still be saved.
+    const local = await supabase.from('dealer_master')
+      .select('id,dealer_name,dealer_code,grd_dealer_id')
+      .eq('grd_dealer_id', id)
+      .maybeSingle();
+    if (!local.error && local.data) return local.data;
+    throw bridgeErr;
+  }
+
   const grdDealer = (data.dealers || []).find((d) => String(d.id) === id);
   if (!grdDealer) throw new Error('Dealer not found in GRD dealer master.');
 
