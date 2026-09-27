@@ -44,8 +44,23 @@ export default async function handler(req, res) {
       return result.data;
     };
 
+    const lookupPhone = async (phone) => {
+      // Older admin records may use 10 digits, 91XXXXXXXXXX, or +91XXXXXXXXXX.
+      const variants = [...new Set([phone, `91${phone}`, `+91${phone}`])];
+      const result = await supabase
+        .from('users')
+        .select('id, full_name, phone, email, password_hash, role, is_active')
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .in('phone', variants)
+        .limit(1)
+        .maybeSingle();
+      if (result.error) error = result.error;
+      return result.data;
+    };
+
     if (/^\d{10}$/.test(normalizedPhone)) {
-      adminUser = await lookup('phone', normalizedPhone);
+      adminUser = await lookupPhone(normalizedPhone);
     } else if (loginId.includes('@')) {
       adminUser = await lookup('email', loginId.toLowerCase());
     } else {
