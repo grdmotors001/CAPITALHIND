@@ -28,7 +28,7 @@ export default async function handler(req,res){
       const outstanding=em.reduce((n,e)=>n+Math.max(0,Number(e.emi_amount||0)-Number(e.paid_amount||0)),0);
       const overdue=em.filter(e=>String(e.due_date)<today).reduce((n,e)=>n+Math.max(0,Number(e.emi_amount||0)-Number(e.paid_amount||0)),0);
       const dueToday=em.filter(e=>String(e.due_date)===today).reduce((n,e)=>n+Math.max(0,Number(e.emi_amount||0)-Number(e.paid_amount||0)),0);
-      const next=em.find(e=>Math.max(0,Number(e.emi_amount||0)-Number(e.paid_amount||0)>0 && String(e.due_date)>=today);
+      const next=em.find(e=>Math.max(0,Number(e.emi_amount||0)-Number(e.paid_amount||0))>0 && String(e.due_date)>=today);
       return {id:r.id,application_no:r.application_no,loan_account_no:r.loan_account_no,application_status:r.application_status,loan_amount_requested:r.loan_amount_requested,customer_name:r.customer_profiles?.full_name||'—',customer_phone:r.customer_profiles?.phone||'—',dealer_name:r.dealer_master?.dealer_name||'—',dealer_code:r.dealer_master?.dealer_code||'',total_received:receiptMap[r.id]||0,outstanding:Number(outstanding.toFixed(2)),overdue:Number(overdue.toFixed(2)),due_today:Number(dueToday.toFixed(2)),next_due_date:next?.due_date||null,next_due_amount:next?Math.max(0,Number(next.emi_amount||0)-Number(next.paid_amount||0)):0,emi_count:em.length});
     }).filter(r=>r.outstanding>0);
     const totals=loans.reduce((a,r)=>({outstanding:a.outstanding+r.outstanding,overdue:a.overdue+r.overdue,due_today:a.due_today+r.due_today,received:a.received+r.total_received}),{outstanding:0,overdue:0,due_today:0,received:0});
