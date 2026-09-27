@@ -23,18 +23,22 @@ export default async function handler(req, res) {
   const supabase = getSupabase();
 
   try {
-    if (!Number.isInteger(grdDealerId) || grdDealerId <= 0) {
-      return sendError(res, 400, 'GRD dealer ID is required');
+    let dealers;
+    let dealerIds;
+    if (Number.isInteger(grdDealerId) && grdDealerId > 0) {
+      const dealer = await ensureGrdDealer({ grdDealerId });
+      dealers = [dealer];
+      dealerIds = [dealer.id];
+    } else {
+      const { data, error } = await supabase
+        .from('dealer_master')
+        .select('id, dealer_name, dealer_code, grd_dealer_id')
+        .not('grd_dealer_id', 'is', null);
+      if (error) throw error;
+      dealers = data || [];
+      dealerIds = dealers.map(d => d.id);
     }
-
-    // A GRD request is allowed to bootstrap the CHFPL dealer mirror.
-    // No manual dealer_master mapping is required.
-    const dealer = await ensureGrdDealer({ grdDealerId });
-    const dealers = [dealer];
-    const dealerIds = [dealer.id];
-    if (!dealerIds.length) {
-      return res.status(200).json({ success: true, applications: [] });
-    }
+    if (!dealerIds.length) return res.status(200).json({ success: true, applications: [] });
 
     let query = supabase
       .from('loan_applications')
@@ -42,6 +46,8 @@ export default async function handler(req, res) {
         id,
         application_no,
         application_status,
+        lifecycle_status,
+        tvr_status,
         loan_account_no,
         loan_amount_requested,
         tenure_months,
@@ -66,6 +72,8 @@ export default async function handler(req, res) {
       id: row.id,
       application_no: row.application_no,
       status: row.application_status,
+      lifecycle_status: row.lifecycle_status || null,
+      tvr_status: row.tvr_status || null,
       loan_account_no: row.loan_account_no,
       loan_amount_requested: Number(row.loan_amount_requested || 0),
       tenure_months: row.tenure_months,
