@@ -1293,3 +1293,232 @@ create index if not exists loan_restructure_requests_status_idx on public.loan_r
 
 alter table public.loan_restructure_requests enable row level security;
 
+
+
+-- ===== CHFPL migrations 0026-0034 =====
+
+-- 0026_telecaller_collection_crm.sql
+-- Tele Caller NBFC CRM: PTP tracking and indexes.
+create table if not exists public.telecaller_ptp (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null references public.loan_applications(id) on delete cascade,
+  telecaller_id uuid not null references public.users(id) on delete cascade,
+  promised_date date not null,
+  promised_amount numeric(12,2) not null check (promised_amount > 0),
+  status text not null default 'open' check (status in ('open','kept','broken','cancelled')),
+  remarks text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists telecaller_ptp_user_date_idx on public.telecaller_ptp(telecaller_id,promised_date,status);
+create index if not exists telecaller_ptp_loan_idx on public.telecaller_ptp(loan_application_id,created_at desc);
+alter table public.telecaller_ptp enable row level security;
+
+
+-- 0027_tvr_after_approval.sql
+-- CHFPL Step 11.7: TVR (Tele Verification Report) after loan approval.
+-- TVR is a mandatory gate between DO approval and loan creation/disbursement.
+
+alter table public.loan_applications
+  add column if not exists tvr_status text not null default 'not_required';
+
+alter table public.loan_applications drop constraint if exists loan_applications_tvr_status_check;
+alter table public.loan_applications add constraint loan_applications_tvr_status_check
+check (tvr_status in ('not_required','pending','submitted','verified','failed','hold'));
+
+create index if not exists loan_applications_tvr_status_idx
+on public.loan_applications(tvr_status);
+
+create table if not exists public.loan_tvrs (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null unique references public.loan_applications(id) on delete cascade,
+  assigned_fe_id uuid references public.users(id) on delete set null,
+  verified_by uuid references public.users(id) on delete set null,
+  status text not null default 'pending' check (status in ('pending','submitted','verified','failed','hold')),
+  verification_date date,
+  verification_time time,
+  customer_contacted boolean,
+  applicant_confirmed boolean,
+  address_confirmed boolean,
+  employment_confirmed boolean,
+  reference_confirmed boolean,
+  documents_checked boolean,
+  vehicle_details_confirmed boolean,
+  alternate_mobile_no text,
+  reference_name text,
+  reference_mobile text,
+  remarks text,
+  recommendation text check (recommendation in ('positive','negative','hold')),
+  verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists loan_tvrs_fe_status_idx on public.loan_tvrs(assigned_fe_id, status);
+create index if not exists loan_tvrs_app_idx on public.loan_tvrs(loan_application_id);
+
+alter table public.loan_tvrs enable row level security;
+
+-- Existing approved applications become TVR-pending only when they have an FE.
+insert into public.loan_tvrs (loan_application_id, assigned_fe_id, status)
+select id, assigned_fe_id, 'pending'
+from public.loan_applications
+where application_status = 'approved'
+  and assigned_fe_id is not null
+on conflict (loan_application_id) do nothing;
+
+update public.loan_applications la
+set tvr_status = 'pending'
+where la.application_status = 'approved'
+  and la.assigned_fe_id is not null
+  and la.tvr_status = 'not_required';
+
+create or replace function public.create_tvr_after_approval()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.application_status = 'approved'
+     and new.assigned_fe_id is not null
+     and (old.application_status is distinct from 'approved' or old.assigned_fe_id is distinct from new.assigned_fe_id) then
+    insert into public.loan_tvrs (loan_application_id, assigned_fe_id, status)
+    values (new.id, new.assigned_fe_id, 'pending')
+    on conflict (loan_application_id) do update
+      set assigned_fe_id = excluded.assigned_fe_id,
+          updated_at = now();
+
+    new.tvr_status := 'pending';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_create_tvr_after_approval on public.loan_applications;
+create trigger trg_create_tvr_after_approval
+before update of application_status, assigned_fe_id on public.loan_applications
+for each row execute function public.create_tvr_after_approval();
+
+
+-- 0028_admin_manual_loan.sql
+-- Admin direct/manual loan creation support.
+-- Dealer is entered by Admin; dealer_user_id is optional for admin-originated loans.
+alter table public.loan_applications
+  alter column dealer_user_id drop not null;
+
+create index if not exists loan_applications_loan_account_no_idx
+  on public.loan_applications(loan_account_no);
+
+
+-- 0029_grd_vehicle_model_sync.sql
+-- Sync GRD vehicle models into CHFPL's master.
+-- GRD is the source of truth for model identity.
+
+alter table public.vehicle_model_master
+  add column if not exists grd_model_id bigint;
+
+alter table public.vehicle_model_master
+  add column if not exists grd_model_code text;
+
+create unique index if not exists vehicle_model_master_grd_model_id_uq
+  on public.vehicle_model_master(grd_model_id)
+  where grd_model_id is not null;
+
+create unique index if not exists vehicle_model_master_grd_model_code_uq
+  on public.vehicle_model_master(grd_model_code)
+  where grd_model_code is not null;
+
+
+-- 0030_grd_dealer_identity_sync.sql
+-- GRD dealer identity mirror
+-- GRD is the source of truth for dealer identity.
+
+ALTER TABLE public.dealer_master
+  ADD COLUMN IF NOT EXISTS grd_dealer_id BIGINT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.dealer_master'::regclass
+      AND conname = 'dealer_master_grd_dealer_id_key'
+  ) THEN
+    ALTER TABLE public.dealer_master
+      ADD CONSTRAINT dealer_master_grd_dealer_id_key
+      UNIQUE (grd_dealer_id);
+  END IF;
+END $$;
+
+
+-- 0031_atomic_application_number.sql
+-- Atomic CHF application-number generation.
+-- Avoid count()+1 collisions when two loan submissions arrive close together.
+
+CREATE TABLE IF NOT EXISTS public.chf_application_counters (
+  year INTEGER PRIMARY KEY,
+  last_number INTEGER NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION public.next_chf_application_no()
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  current_year INTEGER := EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
+  next_number INTEGER;
+BEGIN
+  INSERT INTO public.chf_application_counters(year, last_number)
+  VALUES (current_year, 1)
+  ON CONFLICT (year)
+  DO UPDATE SET last_number = public.chf_application_counters.last_number + 1
+  RETURNING last_number INTO next_number;
+
+  RETURN format('CHF-%s-%s', current_year, lpad(next_number::text, 4, '0'));
+END;
+$$;
+
+
+-- 0032_repo_resale_status.sql
+-- GRD resale lifecycle for CHFPL repossessed vehicles.
+alter table public.vehicle_repossessions
+  add column if not exists resale_status text not null default 'SEIZED';
+
+alter table public.vehicle_repossessions
+  drop constraint if exists vehicle_repossessions_resale_status_check;
+
+alter table public.vehicle_repossessions
+  add constraint vehicle_repossessions_resale_status_check
+  check (resale_status in ('SEIZED','AVAILABLE_FOR_SALE','ALLOCATED_TO_GRD','SOLD'));
+
+create index if not exists vehicle_repossessions_resale_status_idx
+  on public.vehicle_repossessions(resale_status, repo_date desc);
+
+
+-- 0033_repo_vehicle_details.sql
+-- Additional vehicle identity captured at repossession for GRD resale handoff.
+alter table public.vehicle_repossessions
+  add column if not exists model_name text,
+  add column if not exists colour text,
+  add column if not exists toolkit text;
+
+
+-- 0034_create_loan_emi_fields.sql
+-- CHFPL: activate approved loans with disbursement + EMI schedule support.
+-- Keeps existing GRD/loan application fields intact and adds only loan-account
+-- lifecycle/EMI linkage fields required by the redesigned Create Loan screen.
+
+alter table public.loan_applications
+  add column if not exists engine_no text,
+  add column if not exists loan_remarks text,
+  add column if not exists first_emi_date date,
+  add column if not exists emi_loan_id uuid unique;
+
+alter table public.emi_schedule
+  add column if not exists loan_application_id bigint references public.loan_applications(id) on delete cascade;
+
+create index if not exists idx_emi_schedule_application
+  on public.emi_schedule(loan_application_id);
+
+create index if not exists idx_loan_applications_emi_loan
+  on public.loan_applications(emi_loan_id);
+
