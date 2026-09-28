@@ -26,61 +26,6 @@ create table if not exists chfpl_users (
 );
 
 -- ============================================================
--- DEALER MASTER + DEALER USERS
--- ============================================================
-create table if not exists chfpl_dealer_master (
-  id bigserial primary key,
-  dealer_name text not null,
-  dealer_code text unique,
-  city text,
-  state text,
-  contact_phone text,
-  contact_email text,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists chfpl_dealer_users (
-  id bigserial primary key,
-  dealer_id bigint not null references chfpl_dealer_master(id) on delete cascade,
-  full_name text not null,
-  phone text unique not null,
-  email text,
-  password_hash text not null,
-  role text not null default 'dealer' check (role in ('dealer','dealer_admin')),
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
--- ============================================================
--- VEHICLE MASTER
--- ============================================================
-create table if not exists chfpl_vehicle_oem_master (
-  id bigserial primary key,
-  oem_name text not null,
-  is_active boolean not null default true
-);
-
-create table if not exists chfpl_vehicle_model_master (
-  id bigserial primary key,
-  oem_id bigint references chfpl_vehicle_oem_master(id),
-  model_name text not null unique,
-  vehicle_type text not null check (vehicle_type in ('2W','3W','4W')),
-  ex_showroom_price numeric(12,2) not null,
-  battery_capacity text,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists chfpl_dealer_vehicle_mapping (
-  id bigserial primary key,
-  dealer_id bigint not null references chfpl_dealer_master(id) on delete cascade,
-  vehicle_model_id bigint not null references chfpl_vehicle_model_master(id) on delete cascade,
-  is_active boolean not null default true,
-  unique (dealer_id, vehicle_model_id)
-);
-
--- ============================================================
 -- CUSTOMER + LOAN APPLICATION
 -- ============================================================
 create table if not exists chfpl_customer_profiles (
@@ -98,17 +43,17 @@ create table if not exists chfpl_customer_profiles (
   aadhaar_masked text not null,
   occupation text,
   monthly_income numeric(12,2),
-  created_by_dealer_id bigint references chfpl_dealer_master(id),
+  created_by_dealer_id bigint references dealer_master(id),
   created_at timestamptz not null default now()
 );
 
 create table if not exists chfpl_loan_applications (
   id bigserial primary key,
   application_no text unique not null,
-  dealer_id bigint not null references chfpl_dealer_master(id),
-  dealer_user_id bigint not null references chfpl_dealer_users(id),
+  dealer_id bigint not null references dealer_master(id),
+  dealer_user_id bigint not null references dealer_users(id),
   customer_id bigint not null references chfpl_customer_profiles(id),
-  vehicle_model_id bigint not null references chfpl_vehicle_model_master(id),
+  vehicle_model_id bigint not null references vehicle_model_master(id),
   vehicle_price numeric(12,2) not null,
   down_payment numeric(12,2) not null,
   loan_amount_requested numeric(12,2) not null,
@@ -139,7 +84,7 @@ create table if not exists chfpl_kyc_documents (
     ('pan','aadhaar_front','aadhaar_back','photo','address_proof','income_proof','bank_statement','other')),
   file_path text not null,   -- Supabase Storage object path
   file_name text not null,
-  uploaded_by bigint references chfpl_dealer_users(id),
+  uploaded_by bigint references dealer_users(id),
   created_at timestamptz not null default now()
 );
 
@@ -179,7 +124,7 @@ create table if not exists chfpl_sanction_records (
 
 create table if not exists chfpl_dealer_incentives (
   id bigserial primary key,
-  dealer_id bigint not null references chfpl_dealer_master(id) on delete cascade,
+  dealer_id bigint not null references dealer_master(id) on delete cascade,
   loan_application_id bigint references chfpl_loan_applications(id),
   incentive_amount numeric(12,2),
   status text default 'pending',
@@ -200,11 +145,7 @@ create index if not exists idx_kyc_documents_application on chfpl_kyc_documents(
 -- against the anon/public key.
 -- ============================================================
 alter table chfpl_users enable row level security;
-alter table chfpl_dealer_master enable row level security;
-alter table chfpl_dealer_users enable row level security;
-alter table chfpl_vehicle_oem_master enable row level security;
-alter table chfpl_vehicle_model_master enable row level security;
-alter table chfpl_dealer_vehicle_mapping enable row level security;
+
 alter table chfpl_customer_profiles enable row level security;
 alter table chfpl_loan_applications enable row level security;
 alter table chfpl_guarantor_details enable row level security;
@@ -220,14 +161,6 @@ alter table chfpl_dealer_incentives enable row level security;
 -- ============================================================
 -- Seed data (safe to delete/edit)
 -- ============================================================
-insert into chfpl_vehicle_oem_master (oem_name) values ('GRD EV Limited')
-  on conflict do nothing;
-
-insert into chfpl_dealer_master (dealer_name, dealer_code, city, state)
-  values ('Demo Dealer', 'DLR-0001', 'New Delhi', 'Delhi')
-  on conflict (dealer_code) do nothing;
-
-
 -- ===== 0002_loan_workflow.sql =====
 -- CHFPL — Loan workflow: Dealer submits -> Admin assigns FE -> FE completes FI -> DO approves
 -- Run this after 0001_init.sql (Supabase SQL Editor, or `supabase db push`).
@@ -315,7 +248,7 @@ create index if not exists otp_codes_phone_idx on chfpl_otp_codes (phone, create
 
 -- ===== 0004_admin_masters.sql =====
 -- CHFPL — Admin Masters: Hypothecation (HP), Loan Type
--- (Vehicle Model master already exists — chfpl_vehicle_model_master, 0001_init.sql)
+-- (Vehicle Model master already exists — vehicle_model_master, 0001_init.sql)
 -- Run this after 0001/0002/0003 (Supabase SQL Editor, or `supabase db push`).
 
 -- ============================================================
@@ -530,12 +463,12 @@ alter table public.chfpl_loan_payment_vouchers enable row level security;
 -- ===== 0008_delivery_sales_workflow.sql =====
 -- Loan -> Delivery -> Sale workflow
 alter table public.chfpl_loan_applications
-  add column if not exists dealer_user_id uuid references public.chfpl_dealer_users(id) on delete set null;
+  add column if not exists dealer_user_id uuid references public.dealer_users(id) on delete set null;
 
 create table if not exists public.chfpl_delivery_details (
   id uuid primary key default gen_random_uuid(),
   loan_application_id bigint not null unique references public.chfpl_loan_applications(id) on delete cascade,
-  dealer_user_id uuid references public.chfpl_dealer_users(id) on delete set null,
+  dealer_user_id uuid references public.dealer_users(id) on delete set null,
   status text not null default 'locked' check (status in ('locked','delivered','cancelled')),
   delivery_date date,
   vehicle_no text,
@@ -554,7 +487,7 @@ create table if not exists public.chfpl_sales (
   id uuid primary key default gen_random_uuid(),
   loan_application_id bigint unique references public.chfpl_loan_applications(id) on delete restrict,
   delivery_id uuid references public.chfpl_delivery_details(id) on delete set null,
-  dealer_user_id uuid references public.chfpl_dealer_users(id) on delete set null,
+  dealer_user_id uuid references public.dealer_users(id) on delete set null,
   created_by uuid,
   source text not null default 'staff' check (source in ('staff','dealer')),
   sale_status text not null default 'pending' check (sale_status in ('pending','completed','cancelled')),
@@ -583,7 +516,7 @@ create unique index if not exists sales_active_loan_uq
 
 -- ===== 0008_oem_receipts.sql =====
 -- OEM master + standalone receipt workflow.
-create table if not exists public.chfpl_vehicle_oem_master (
+create table if not exists public.vehicle_oem_master (
   id bigint generated by default as identity primary key,
   oem_name text not null unique,
   is_active boolean not null default true,
@@ -593,22 +526,22 @@ create table if not exists public.chfpl_vehicle_oem_master (
 -- Add OEM relation to the existing vehicle model master when that table exists.
 do $$
 begin
-  if to_regclass('public.chfpl_vehicle_model_master') is not null then
-    alter table public.chfpl_vehicle_model_master
+  if to_regclass('public.vehicle_model_master') is not null then
+    alter table public.vehicle_model_master
       add column if not exists oem_id bigint;
     if not exists (
       select 1 from pg_constraint
       where conname = 'vehicle_model_master_oem_id_fkey'
     ) then
-      alter table public.chfpl_vehicle_model_master
+      alter table public.vehicle_model_master
         add constraint vehicle_model_master_oem_id_fkey
-        foreign key (oem_id) references public.chfpl_vehicle_oem_master(id) on delete set null;
+        foreign key (oem_id) references public.vehicle_oem_master(id) on delete set null;
     end if;
   end if;
 end $$;
 
 create index if not exists vehicle_oem_master_active_idx
-  on public.chfpl_vehicle_oem_master(is_active, oem_name);
+  on public.vehicle_oem_master(is_active, oem_name);
 
 -- Receipt table is also created here so a fresh install gets the standalone receipt tab.
 create table if not exists public.chfpl_loan_receipts (
@@ -721,19 +654,19 @@ create index if not exists loan_applications_vehicle_registration_date_idx on pu
 
 -- ===== 0011_dealer_login_compat.sql =====
 -- Dealer login compatibility / bootstrap.
--- The application expects public.chfpl_dealer_master and public.chfpl_dealer_users.
+-- The application expects public.dealer_master and public.dealer_users.
 -- This migration is safe on installations where these tables already exist.
 
-create table if not exists public.chfpl_dealer_master (
+create table if not exists public.dealer_master (
   id bigint generated by default as identity primary key,
   dealer_code text unique,
   dealer_name text not null,
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.chfpl_dealer_users (
+create table if not exists public.dealer_users (
   id uuid primary key default gen_random_uuid(),
-  dealer_id bigint not null references public.chfpl_dealer_master(id) on delete cascade,
+  dealer_id bigint not null references public.dealer_master(id) on delete cascade,
   full_name text not null,
   phone text not null,
   password_hash text not null,
@@ -742,8 +675,8 @@ create table if not exists public.chfpl_dealer_users (
   created_at timestamptz not null default now()
 );
 
--- Bring older chfpl_dealer_users tables up to the fields required by the current API.
-alter table public.chfpl_dealer_users
+-- Bring older dealer_users tables up to the fields required by the current API.
+alter table public.dealer_users
   add column if not exists dealer_id bigint,
   add column if not exists full_name text,
   add column if not exists phone text,
@@ -753,15 +686,15 @@ alter table public.chfpl_dealer_users
   add column if not exists created_at timestamptz default now();
 
 create unique index if not exists dealer_users_phone_uq
-  on public.chfpl_dealer_users(phone);
+  on public.dealer_users(phone);
 create index if not exists dealer_users_dealer_idx
-  on public.chfpl_dealer_users(dealer_id);
+  on public.dealer_users(dealer_id);
 create index if not exists dealer_users_active_idx
-  on public.chfpl_dealer_users(is_active);
+  on public.dealer_users(is_active);
 
 -- Server-side APIs use the service-role key.
-alter table public.chfpl_dealer_master enable row level security;
-alter table public.chfpl_dealer_users enable row level security;
+alter table public.dealer_master enable row level security;
+alter table public.dealer_users enable row level security;
 
 
 -- ===== 0012_backfill_legacy_fe_assignments.sql =====
@@ -808,10 +741,10 @@ alter table chfpl_users add column if not exists father_name text;
 alter table chfpl_users add column if not exists address text;
 alter table chfpl_users add column if not exists profile_photo text;
 
-alter table chfpl_dealer_users add column if not exists dob date;
-alter table chfpl_dealer_users add column if not exists father_name text;
-alter table chfpl_dealer_users add column if not exists address text;
-alter table chfpl_dealer_users add column if not exists profile_photo text;
+alter table dealer_users add column if not exists dob date;
+alter table dealer_users add column if not exists father_name text;
+alter table dealer_users add column if not exists address text;
+alter table dealer_users add column if not exists profile_photo text;
 
 
 -- ===== 0014_cashier_handover.sql =====
@@ -862,7 +795,7 @@ create table if not exists public.vehicle_repossessions (
   battery_master_id bigint references public.battery_master(id) on delete restrict,
   rc_available boolean not null default false,
   charger_available boolean not null default false,
-  parked_dealer_id bigint not null references public.chfpl_dealer_master(id) on delete restrict,
+  parked_dealer_id bigint not null references public.dealer_master(id) on delete restrict,
   remarks text,
   created_at timestamptz not null default now(),
   constraint vehicle_repossessions_battery_check check (
@@ -878,8 +811,6 @@ create index if not exists vehicle_repossessions_loan_idx on public.vehicle_repo
 
 alter table public.battery_master enable row level security;
 alter table public.vehicle_repossessions enable row level security;
-
-
 
 
 -- ===== CHFPL migrations 0016-0025 =====
@@ -1294,7 +1225,6 @@ create index if not exists loan_restructure_requests_status_idx on public.chfpl_
 alter table public.chfpl_loan_restructure_requests enable row level security;
 
 
-
 -- ===== CHFPL migrations 0026-0034 =====
 
 -- 0026_telecaller_collection_crm.sql
@@ -1407,47 +1337,6 @@ alter table public.chfpl_loan_applications
 
 create index if not exists loan_applications_loan_account_no_idx
   on public.chfpl_loan_applications(loan_account_no);
-
-
--- 0029_grd_vehicle_model_sync.sql
--- Sync GRD vehicle models into CHFPL's master.
--- GRD is the source of truth for model identity.
-
-alter table public.chfpl_vehicle_model_master
-  add column if not exists grd_model_id bigint;
-
-alter table public.chfpl_vehicle_model_master
-  add column if not exists grd_model_code text;
-
-create unique index if not exists vehicle_model_master_grd_model_id_uq
-  on public.chfpl_vehicle_model_master(grd_model_id)
-  where grd_model_id is not null;
-
-create unique index if not exists vehicle_model_master_grd_model_code_uq
-  on public.chfpl_vehicle_model_master(grd_model_code)
-  where grd_model_code is not null;
-
-
--- 0030_grd_dealer_identity_sync.sql
--- GRD dealer identity mirror
--- GRD is the source of truth for dealer identity.
-
-ALTER TABLE public.chfpl_dealer_master
-  ADD COLUMN IF NOT EXISTS grd_dealer_id BIGINT;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conrelid = 'public.chfpl_dealer_master'::regclass
-      AND conname = 'dealer_master_grd_dealer_id_key'
-  ) THEN
-    ALTER TABLE public.chfpl_dealer_master
-      ADD CONSTRAINT dealer_master_grd_dealer_id_key
-      UNIQUE (grd_dealer_id);
-  END IF;
-END $$;
 
 
 -- 0031_atomic_application_number.sql
