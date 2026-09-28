@@ -4,6 +4,7 @@
 
 import { getSupabase } from '../_lib/supabase.js';
 import { sendError, methodGuard } from '../_lib/auth.js';
+import { notifyGrdLoanStatus } from '../_lib/grd-loan-webhook.js';
 import bcrypt from 'bcryptjs';
 
 function maskAadhaar(value) {
@@ -354,6 +355,15 @@ export default async function handler(req, res) {
         remarks: 'Submitted from GRD Motors dealer system'
       });
     if (historyErr) throw historyErr;
+
+    // Notify GRD immediately after the CHFPL application exists. The
+    // grd_submission_ref lets GRD link the event to the exact local row even
+    // before the synchronous POST response is processed.
+    await notifyGrdLoanStatus({
+      chfplLoanId: application.id,
+      status: application.application_status,
+      grdSubmissionRef: body.grd_submission_ref,
+    });
 
     return res.status(200).json({
       success: true,
