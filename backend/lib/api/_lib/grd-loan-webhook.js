@@ -2,7 +2,7 @@
 // The webhook is deliberately idempotent: GRD upserts the status by chfpl_loan_id.
 // Failures are retried here so a temporary GRD outage does not lose the status event.
 
-export async function notifyGrdLoanStatus({ chfplLoanId, status }) {
+export async function notifyGrdLoanStatus({ chfplLoanId, status, grdSubmissionRef = null }) {
   const base = String(process.env.GRD_WEBHOOK_URL || '').replace(/\/$/, '');
   const secret = String(process.env.CHFPL_GRD_BRIDGE_SECRET || '').trim();
   if (!base || !secret || !chfplLoanId || !status) return false;
@@ -10,6 +10,7 @@ export async function notifyGrdLoanStatus({ chfplLoanId, status }) {
   const payload = JSON.stringify({
     chfpl_loan_id: Number(chfplLoanId),
     status: String(status).trim(),
+    grd_submission_ref: grdSubmissionRef ? Number(grdSubmissionRef) : null,
   });
 
   let lastError = null;
