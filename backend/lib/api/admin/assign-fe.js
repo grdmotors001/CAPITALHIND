@@ -6,6 +6,7 @@
 
 import { getSupabase } from '../_lib/supabase.js';
 import { requireAdminAuth, sendError, methodGuard } from '../_lib/auth.js';
+import { notifyGrdLoanStatus } from '../_lib/grd-loan-webhook.js';
 
 export default async function handler(req, res) {
   if (!methodGuard(req, res, 'POST')) return;
@@ -66,6 +67,8 @@ export default async function handler(req, res) {
       console.error('[admin/assign-fe]', updateErr.message);
       return sendError(res, 500, 'Could not assign application.');
     }
+
+    await notifyGrdLoanStatus({ chfplLoanId: loan_application_id, status: 'fi_pending' });
 
     await supabase.from('application_status_history').insert({
       loan_application_id,
