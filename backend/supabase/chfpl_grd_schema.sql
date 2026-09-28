@@ -880,3 +880,416 @@ alter table public.battery_master enable row level security;
 alter table public.vehicle_repossessions enable row level security;
 
 
+
+
+-- ===== CHFPL migrations 0016-0025 =====
+
+-- 0016_receipt_and_repo_hardening.sql
+-- Hardening for FE cash receipts and Repo register.
+-- Safe to run after 0008/0009/0015; all objects/columns are IF NOT EXISTS.
+
+create table if not exists public.loan_receipts (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null references public.loan_applications(id) on delete cascade,
+  receipt_no text not null unique,
+  receipt_date date not null default current_date,
+  amount numeric not null check (amount > 0),
+  payment_mode text not null default 'cash' check (payment_mode in ('cash','upi','bank','cheque','other')),
+  reference_no text,
+  remarks text,
+  entered_by uuid references public.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.loan_receipts add column if not exists collection_source text not null default 'manual';
+alter table public.loan_receipts add column if not exists collected_at timestamptz;
+
+create index if not exists loan_receipts_entered_by_idx on public.loan_receipts(entered_by, created_at desc);
+create index if not exists loan_receipts_collection_source_idx on public.loan_receipts(collection_source, created_at desc);
+create index if not exists vehicle_repossessions_repo_date_idx on public.vehicle_repossessions(repo_date desc, repo_time desc);
+
+alter table public.loan_receipts enable row level security;
+alter table public.vehicle_repossessions enable row level security;
+
+
+-- 0017_loan_ledger_expenses_noc.sql
+-- Loan ledger extensions: NOC charges and loan-specific expenses.
+-- These entries are printed in the loan ledger together with receipts.
+
+create table if not exists public.expense_master (
+  id bigserial primary key,
+  expense_name text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.loan_expenses (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null references public.loan_applications(id) on delete cascade,
+  expense_master_id bigint not null references public.expense_master(id) on delete restrict,
+  expense_date date not null default current_date,
+  amount numeric(14,2) not null check (amount > 0),
+  remarks text,
+  created_by uuid references public.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.loan_charges (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null references public.loan_applications(id) on delete cascade,
+  charge_type text not null default 'noc' check (charge_type in ('noc')),
+  charge_name text not null default 'NOC Charges',
+  charge_date date not null default current_date,
+  amount numeric(14,2) not null check (amount > 0),
+  remarks text,
+  created_by uuid references public.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists loan_expenses_loan_idx on public.loan_expenses(loan_application_id, expense_date desc, created_at desc);
+create index if not exists loan_expenses_master_idx on public.loan_expenses(expense_master_id);
+create index if not exists loan_charges_loan_idx on public.loan_charges(loan_application_id, charge_date desc, created_at desc);
+
+alter table public.expense_master enable row level security;
+alter table public.loan_expenses enable row level security;
+alter table public.loan_charges enable row level security;
+
+-- Useful starter masters; duplicates are ignored.
+insert into public.expense_master (expense_name) values
+  ('Legal Charges'), ('Field Visit Expense'), ('Documentation Charges'), ('Parking / Yard Charges'), ('Other Expense')
+on conflict (expense_name) do nothing;
+
+
+-- 0018_audit_logs.sql
+-- CHFPL Step 3: Audit log foundation
+-- Tracks important finance system changes for compliance and traceability
+
+create table if not exists public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete set null,
+  action text not null,
+  module text,
+  record_id text,
+  old_data jsonb,
+  new_data jsonb,
+  ip_address text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists audit_logs_user_id_idx on public.audit_logs(user_id);
+create index if not exists audit_logs_module_idx on public.audit_logs(module);
+create index if not exists audit_logs_created_at_idx on public.audit_logs(created_at);
+
+alter table public.audit_logs enable row level security;
+
+
+-- 0019_loan_lifecycle_status.sql
+-- CHFPL Step 4: Standard loan lifecycle workflow
+-- Keeps status transitions consistent for NBFC operations.
+
+alter table public.loan_applications
+  add column if not exists lifecycle_status text not null default 'NEW';
+
+alter table public.loan_applications drop constraint if exists loan_applications_lifecycle_status_check;
+alter table public.loan_applications add constraint loan_applications_lifecycle_status_check
+check (lifecycle_status in (
+  'NEW',
+  'DOCUMENT_PENDING',
+  'FI_PENDING',
+  'FI_COMPLETED',
+  'APPROVED',
+  'DISBURSED',
+  'ACTIVE',
+  'CLOSED',
+  'REJECTED'
+));
+
+create index if not exists loan_applications_lifecycle_status_idx
+on public.loan_applications(lifecycle_status);
+
+create table if not exists public.loan_status_history (
+  id uuid primary key default gen_random_uuid(),
+  loan_application_id bigint not null references public.loan_applications(id) on delete cascade,
+  old_status text,
+  new_status text not null,
+  changed_by uuid references public.users(id) on delete set null,
+  remarks text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists loan_status_history_loan_idx
+on public.loan_status_history(loan_application_id, created_at desc);
+
+alter table public.loan_status_history enable row level security;
+
+
+-- 0020_kyc_document_security.sql
+-- Step 6: KYC document security foundation
+
+alter table if exists public.kyc_documents
+  add column if not exists verification_status text default 'UPLOADED',
+  add column if not exists verified_by uuid,
+  add column if not exists verified_at timestamptz,
+  add column if not exists rejection_reason text;
+
+alter table if exists public.kyc_documents
+  add constraint kyc_documents_verification_status_check
+  check (verification_status in ('UPLOADED','VERIFIED','REJECTED'));
+
+create index if not exists idx_kyc_documents_status
+on public.kyc_documents(verification_status);
+
+-- Keep storage private. Create bucket kyc-documents as private in Supabase dashboard.
+
+
+-- 0021_emi_collection_module.sql
+-- CHFPL Step 7: EMI and Collection foundation
+
+create table if not exists public.emi_schedule (
+  id uuid primary key default gen_random_uuid(),
+  loan_id uuid not null,
+  emi_no integer not null,
+  due_date date not null,
+  emi_amount numeric(12,2) not null default 0,
+  principal_amount numeric(12,2) default 0,
+  interest_amount numeric(12,2) default 0,
+  paid_amount numeric(12,2) default 0,
+  status text not null default 'PENDING',
+  paid_date timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
+create table if not exists public.collection_entries (
+  id uuid primary key default gen_random_uuid(),
+  loan_id uuid not null,
+  customer_id uuid,
+  amount numeric(12,2) not null,
+  payment_mode text not null default 'CASH',
+  receipt_no text,
+  collected_by uuid,
+  remarks text,
+  created_at timestamp with time zone default now()
+);
+
+create index if not exists idx_emi_schedule_loan on public.emi_schedule(loan_id);
+create index if not exists idx_emi_schedule_status on public.emi_schedule(status);
+create index if not exists idx_collection_loan on public.collection_entries(loan_id);
+
+alter table public.emi_schedule enable row level security;
+alter table public.collection_entries enable row level security;
+
+
+-- 0022_payment_enach_foundation.sql
+-- Step 8 Payment Gateway and eNACH foundation
+
+create table if not exists payment_transactions (
+ id uuid primary key default gen_random_uuid(),
+ loan_id uuid,
+ customer_id uuid,
+ amount numeric not null,
+ payment_type text,
+ gateway text,
+ transaction_id text,
+ gateway_order_id text,
+ status text default 'CREATED',
+ response_data jsonb,
+ created_at timestamptz default now()
+);
+
+create index if not exists idx_payment_transactions_loan on payment_transactions(loan_id);
+create index if not exists idx_payment_transactions_status on payment_transactions(status);
+
+create table if not exists emandate_records (
+ id uuid primary key default gen_random_uuid(),
+ loan_id uuid,
+ customer_id uuid,
+ mandate_id text,
+ bank_name text,
+ account_last4 text,
+ mandate_status text default 'INITIATED',
+ activation_date timestamptz,
+ failure_reason text,
+ created_at timestamptz default now()
+);
+
+create index if not exists idx_emandate_customer on emandate_records(customer_id);
+create index if not exists idx_emandate_status on emandate_records(mandate_status);
+
+
+-- 0023_payment_ledger_reconciliation.sql
+-- Step 9: Payment webhook reconciliation and loan ledger foundation
+
+create table if not exists public.loan_ledger (
+  id uuid primary key default gen_random_uuid(),
+  loan_id uuid not null,
+  customer_id uuid,
+  transaction_date timestamptz default now(),
+  particular text not null,
+  amount numeric(12,2) not null,
+  entry_type text not null check (entry_type in ('DEBIT','CREDIT')),
+  reference_type text,
+  reference_id text,
+  created_by uuid,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_loan_ledger_loan_id on public.loan_ledger(loan_id);
+create index if not exists idx_loan_ledger_date on public.loan_ledger(transaction_date);
+
+create table if not exists public.payment_webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  gateway text not null,
+  event_id text unique,
+  transaction_id text,
+  payload jsonb,
+  processed boolean default false,
+  created_at timestamptz default now()
+);
+
+
+-- 0024_emi_auto_generation.sql
+-- CHFPL Step 11.2 EMI Auto Generation
+create table if not exists public.loan_disbursement_events (
+ id uuid primary key default gen_random_uuid(),
+ loan_id uuid not null,
+ amount numeric not null,
+ disbursement_date date not null default current_date,
+ created_by uuid,
+ created_at timestamptz default now()
+);
+
+alter table public.emi_schedule
+ add column if not exists principal_amount numeric,
+ add column if not exists interest_amount numeric,
+ add column if not exists opening_balance numeric,
+ add column if not exists closing_balance numeric,
+ add column if not exists paid_date date,
+ add column if not exists days_overdue integer default 0;
+
+create index if not exists idx_emi_due_status on public.emi_schedule(due_date,status);
+
+
+-- 0025_collection_risk_management.sql
+-- CHFPL Step 11.5 - Collection & Risk Management
+-- (Numbered 0025 to fill the gap left between 0024_emi_auto_generation.sql
+--  and 0026_telecaller_collection_crm.sql.)
+--
+-- Adds:
+--  1. Fix for emi_schedule / collection_entries / loan_disbursement_events
+--     .loan_id (was uuid, loan_applications.id is bigint)
+--  2. Penal interest + bounce charge tracking on emi_schedule
+--  3. risk_config — single-row configurable rates & NPA ageing thresholds
+--  4. loan_dpd / loan_npa_status views — days-past-due + IRAC-style ageing bucket per loan
+--  5. loan_restructure_requests — restructure / part-payment / foreclosure workflow
+
+-- 1. Fix loan_id column type. Safety guard: abort if any of the three tables
+--    already has rows, so we never silently null out real collection data.
+do $$
+begin
+  if exists (select 1 from public.emi_schedule limit 1) then
+    raise exception 'emi_schedule has existing rows — review this migration manually before altering loan_id type.';
+  end if;
+  if exists (select 1 from public.collection_entries limit 1) then
+    raise exception 'collection_entries has existing rows — review this migration manually before altering loan_id type.';
+  end if;
+  if exists (select 1 from public.loan_disbursement_events limit 1) then
+    raise exception 'loan_disbursement_events has existing rows — review this migration manually before altering loan_id type.';
+  end if;
+end $$;
+
+alter table public.emi_schedule
+  alter column loan_id type bigint using null;
+alter table public.emi_schedule
+  add constraint emi_schedule_loan_fk foreign key (loan_id) references public.loan_applications(id) on delete cascade;
+
+alter table public.collection_entries
+  alter column loan_id type bigint using null;
+alter table public.collection_entries
+  add constraint collection_entries_loan_fk foreign key (loan_id) references public.loan_applications(id) on delete cascade;
+
+alter table public.loan_disbursement_events
+  alter column loan_id type bigint using null;
+alter table public.loan_disbursement_events
+  add constraint loan_disbursement_events_loan_fk foreign key (loan_id) references public.loan_applications(id) on delete cascade;
+
+-- 2. Penal interest + bounce charge tracking (days_overdue already added by 0024)
+alter table public.emi_schedule
+  add column if not exists penal_interest_amount numeric(12,2) not null default 0,
+  add column if not exists bounce_charge_amount numeric(12,2) not null default 0,
+  add column if not exists is_bounced boolean not null default false,
+  add column if not exists bounce_date date;
+
+-- 3. Risk configuration (single row — editable by admin)
+create table if not exists public.risk_config (
+  id smallint primary key default 1,
+  penal_interest_rate_per_day numeric(6,3) not null default 0.05, -- % per day on overdue EMI
+  bounce_charge_flat numeric(10,2) not null default 500,
+  sma1_start_days int not null default 1,
+  sma2_start_days int not null default 31,
+  npa_start_days int not null default 91,
+  doubtful_start_days int not null default 181,
+  loss_start_days int not null default 361,
+  updated_by uuid references public.users(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  constraint risk_config_single_row check (id = 1)
+);
+insert into public.risk_config (id) values (1) on conflict (id) do nothing;
+alter table public.risk_config enable row level security;
+
+-- 4. Days-past-due per loan (based on unpaid/partially paid EMIs)
+create or replace view public.loan_dpd as
+select
+  loan_id,
+  max(current_date - due_date) as days_past_due,
+  sum(emi_amount - coalesce(paid_amount, 0)) as overdue_amount,
+  count(*) as overdue_emi_count
+from public.emi_schedule
+where status <> 'PAID' and due_date < current_date
+group by loan_id;
+
+-- NPA / ageing bucket classification per loan, IRAC-style buckets
+create or replace view public.loan_npa_status as
+select
+  la.id as loan_id,
+  la.loan_account_no,
+  la.application_no,
+  cp.full_name as customer_name,
+  cp.phone as customer_phone,
+  coalesce(d.days_past_due, 0) as days_past_due,
+  coalesce(d.overdue_amount, 0) as overdue_amount,
+  coalesce(d.overdue_emi_count, 0) as overdue_emi_count,
+  case
+    when coalesce(d.days_past_due, 0) < rc.sma2_start_days then 'STANDARD'
+    when d.days_past_due < rc.npa_start_days then 'SMA'
+    when d.days_past_due < rc.doubtful_start_days then 'SUB_STANDARD'
+    when d.days_past_due < rc.loss_start_days then 'DOUBTFUL'
+    else 'LOSS'
+  end as npa_bucket
+from public.loan_applications la
+join public.customer_profiles cp on cp.id = la.customer_id
+left join public.loan_dpd d on d.loan_id = la.id
+cross join public.risk_config rc
+where la.lifecycle_status in ('ACTIVE', 'DISBURSED');
+
+-- 5. Restructure / part-payment / foreclosure requests
+create table if not exists public.loan_restructure_requests (
+  id uuid primary key default gen_random_uuid(),
+  loan_id bigint not null references public.loan_applications(id) on delete cascade,
+  request_type text not null check (request_type in ('RESTRUCTURE', 'PART_PAYMENT', 'FORECLOSURE')),
+  requested_amount numeric(14,2),
+  new_tenure_months int,
+  new_emi_amount numeric(12,2),
+  reason text,
+  status text not null default 'PENDING' check (status in ('PENDING', 'APPROVED', 'REJECTED')),
+  requested_by uuid references public.users(id) on delete set null,
+  approved_by uuid references public.users(id) on delete set null,
+  approved_at timestamptz,
+  remarks text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists loan_restructure_requests_loan_idx on public.loan_restructure_requests(loan_id, created_at desc);
+create index if not exists loan_restructure_requests_status_idx on public.loan_restructure_requests(status, created_at desc);
+
+alter table public.loan_restructure_requests enable row level security;
+
