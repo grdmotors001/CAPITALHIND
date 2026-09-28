@@ -243,8 +243,10 @@ export default async function handler(req, res) {
       dealerUser = activatedDealerUser;
     }
 
-    const vehicleModel = await findVehicleModel(supabase, vehicleLoan);
-    if (!vehicleModel) {
+    const vehicleModel = (vehicleLoan.grd_model_id || vehicleLoan.grd_model_code || vehicleLoan.grd_model_name)
+      ? await findVehicleModel(supabase, vehicleLoan)
+      : null;
+    if ((vehicleLoan.grd_model_id || vehicleLoan.grd_model_code || vehicleLoan.grd_model_name) && !vehicleModel) {
       return sendError(res, 422, 'Vehicle model was not found in CHFPL Vehicle Master');
     }
 
@@ -281,7 +283,7 @@ export default async function handler(req, res) {
         dealer_id: dealer.id,
         dealer_user_id: dealerUser.id,
         customer_id: customerRow.id,
-        vehicle_model_id: vehicleModel.id,
+        vehicle_model_id: vehicleModel?.id || null,
         vehicle_price: num(vehicleLoan.vehicle_price),
         down_payment: num(vehicleLoan.down_payment),
         loan_amount_requested: num(vehicleLoan.loan_amount_requested),
@@ -349,7 +351,7 @@ export default async function handler(req, res) {
       status: application.application_status,
       dealer_id: dealer.id,
       customer_id: customerRow.id,
-      vehicle_model: vehicleModel.model_name,
+      vehicle_model: vehicleModel?.model_name || null,
       grd_submission_ref: text(body.grd_submission_ref)
     });
   } catch (err) {
