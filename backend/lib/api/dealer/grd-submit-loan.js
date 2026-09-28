@@ -30,8 +30,24 @@ async function findVehicleModel(supabase, vehicleLoan) {
   const grdModelCode = text(vehicleLoan.grd_model_code);
   const modelName = text(vehicleLoan.grd_model_name);
 
+  // GRD may submit the application before a vehicle model is selected.
+  // CHFPL's loan_applications.vehicle_model_id is NOT NULL, so use one
+  // explicit placeholder master row. The real model can be assigned later
+  // without inventing a real vehicle/model identity.
   if (!Number.isFinite(grdModelId) || grdModelId <= 0 || !modelName) {
-    return null;
+    const pendingModelName = 'MODEL_PENDING_GRD';
+    const { data: pending, error: pendingErr } = await supabase
+      .from('vehicle_model_master')
+      .upsert({
+        model_name: pendingModelName,
+        vehicle_type: text(vehicleLoan.vehicle_type) || '3W',
+        ex_showroom_price: 0,
+        is_active: true
+      }, { onConflict: 'model_name' })
+      .select('id, model_name, grd_model_id, grd_model_code')
+      .single();
+    if (pendingErr) throw pendingErr;
+    return pending;
   }
 
   // GRD is the source of truth. The immutable GRD Product ID is the
@@ -243,12 +259,7 @@ export default async function handler(req, res) {
       dealerUser = activatedDealerUser;
     }
 
-    const vehicleModel = (vehicleLoan.grd_model_id || vehicleLoan.grd_model_code || vehicleLoan.grd_model_name)
-      ? await findVehicleModel(supabase, vehicleLoan)
-      : null;
-    if ((vehicleLoan.grd_model_id || vehicleLoan.grd_model_code || vehicleLoan.grd_model_name) && !vehicleModel) {
-      return sendError(res, 422, 'Vehicle model was not found in CHFPL Vehicle Master');
-    }
+    const vehicleModel = await findVehicleModel(supabase, vehicleLoan);
 
     const { data: customerRow, error: customerErr } = await supabase
       .from('customer_profiles')
