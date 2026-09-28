@@ -15,6 +15,7 @@ export default async function handler(req, res) {
   }
 
   const grdDealerId = Number(req.query?.grd_dealer_id || 0);
+  const grdDealerCode = String(req.query?.grd_dealer_code || '').trim();
   const requestedStatuses = String(req.query?.status || '')
     .split(',')
     .map(s => s.trim().toLowerCase())
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
     let dealers;
     let dealerIds;
     if (Number.isInteger(grdDealerId) && grdDealerId > 0) {
-      const dealer = await ensureGrdDealer({ grdDealerId });
+      const dealer = await ensureGrdDealer({ grdDealerId, dealerCode: grdDealerCode || undefined });
       dealers = [dealer];
       dealerIds = [dealer.id];
     } else {
