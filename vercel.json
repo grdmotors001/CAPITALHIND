@@ -6,70 +6,110 @@
       "src": "backend/api/admin.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/dealer.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/do.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/field-executive.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/grd-submit-loan.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
+      }
+    },
+    {
+      "src": "backend/api/grd-dealer-loans.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/grd.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/misc.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/workflow/available-loans.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/workflow/deliveries.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
       "src": "backend/api/workflow/sales.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/lib/**", "backend/api/**"]
+        "includeFiles": [
+          "backend/lib/**",
+          "backend/api/**"
+        ]
       }
     },
     {
@@ -92,6 +132,10 @@
     {
       "src": "/api/grd-submit-loan",
       "dest": "/backend/api/grd-submit-loan.js"
+    },
+    {
+      "src": "/api/grd-dealer-loans",
+      "dest": "/backend/api/grd-dealer-loans.js"
     },
     {
       "src": "/api/dealer/grd-submit-loan",
