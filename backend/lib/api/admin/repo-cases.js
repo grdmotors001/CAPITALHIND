@@ -40,21 +40,20 @@ export default async function handler(req,res){
         }
       }
       if(!Object.keys(patch).length) return sendError(res,400,'No Repo changes supplied.');
-      const finalDealerIdForValidation=Object.prototype.hasOwnProperty.call(patch,'parked_dealer_id') ? patch.parked_dealer_id : null;
-      const currentDealerIdForValidation=finalDealerIdForValidation || null;
-      const currentStatusForValidation=Object.prototype.hasOwnProperty.call(patch,'resale_status') ? patch.resale_status : null;
-      if(currentDealerIdForValidation && currentStatusForValidation==='AVAILABLE_FOR_SALE'){
-        const dealerCheck=await s.from('dealer_master').select('dealer_code').eq('id',currentDealerIdForValidation).maybeSingle();
-        if(String(dealerCheck.data?.dealer_code||'').trim().toUpperCase()==='GRD-FACTORY'){
-          return sendError(res,409,'Factory par parked vehicle Available for Sale nahi ho sakti. Pehle showroom/dealer select karein.');
-        }
-      }
 
       const {data:errorCheck,error:preloadError}=await s.from('vehicle_repossessions')
         .select(`id,vehicle_no,model_name,colour,toolkit,battery_available,battery_no,repo_date,resale_status,parked_dealer_id,battery_master(battery_name),dealer_master(dealer_name,dealer_code,grd_dealer_id)`)
         .eq('id',id)
         .maybeSingle();
       if(preloadError || !errorCheck) return sendError(res,404,'Repo record not found.');
+      const effectiveDealerId=Object.prototype.hasOwnProperty.call(patch,'parked_dealer_id') ? patch.parked_dealer_id : errorCheck.parked_dealer_id;
+      const effectiveStatus=Object.prototype.hasOwnProperty.call(patch,'resale_status') ? patch.resale_status : errorCheck.resale_status;
+      if(effectiveStatus==='AVAILABLE_FOR_SALE' && effectiveDealerId){
+        const dealerCheck=await s.from('dealer_master').select('dealer_code').eq('id',effectiveDealerId).maybeSingle();
+        if(String(dealerCheck.data?.dealer_code||'').trim().toUpperCase()==='GRD-FACTORY'){
+          return sendError(res,409,'Factory par parked vehicle Available for Sale nahi ho sakti. Pehle showroom/dealer select karein.');
+        }
+      }
 
       const {data,error}=await s.from('vehicle_repossessions')
         .update(patch).eq('id',id)
