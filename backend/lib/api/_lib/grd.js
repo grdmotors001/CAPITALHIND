@@ -213,7 +213,8 @@ export async function sendRepoVehicleWebhook(vehicle) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.success === false) {
-    throw new Error(data.error || `GRD Repo webhook failed (${response.status})`);
+    const firstFailure = Array.isArray(data.results) ? data.results.find((x) => x && x.ok === false) : null;
+    throw new Error(data.error || firstFailure?.error || `GRD Repo webhook failed (${response.status})`);
   }
   return { ok: true, status: response.status, data };
 }

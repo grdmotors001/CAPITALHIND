@@ -24,12 +24,9 @@ export default async function handler(req,res){
       const allowed=['ALL','SEIZED','AVAILABLE_FOR_SALE','ALLOCATED_TO_GRD','SOLD'];
       if(status && !allowed.includes(status)) return res.status(400).json({success:false,error:'Invalid resale status.'});
 
-      // In the GRD dealer's "Seized Vehicles" view, a vehicle remains visible
-      // after the factory changes it from SEIZED to AVAILABLE_FOR_SALE.
-      // Other statuses keep their exact status filtering.
-      const statuses=status==='SEIZED'
-        ? ['SEIZED','AVAILABLE_FOR_SALE']
-        : [status];
+      // Seized means HOLD only. Once a vehicle is AVAILABLE_FOR_SALE it must leave the
+      // Seized list and show up in Old Rickshaw stock instead.
+      const statuses=[status];
 
       const dealerId=requestedDealerId(req);
 

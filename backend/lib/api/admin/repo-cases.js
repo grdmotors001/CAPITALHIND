@@ -51,7 +51,9 @@ export default async function handler(req,res){
       if(effectiveStatus==='AVAILABLE_FOR_SALE' && effectiveDealerId){
         const dealerCheck=await s.from('dealer_master').select('dealer_code').eq('id',effectiveDealerId).maybeSingle();
         if(String(dealerCheck.data?.dealer_code||'').trim().toUpperCase()==='GRD-FACTORY'){
-          return sendError(res,409,'Factory par parked vehicle Available for Sale nahi ho sakti. Pehle showroom/dealer select karein.');
+          return sendError(res,409,Object.prototype.hasOwnProperty.call(patch,'parked_dealer_id')
+            ? 'Available for Sale gaadi GRD Factory par park nahi ho sakti. Factory sirf HOLD gaadi ke liye hai; pehle status HOLD karein.'
+            : 'Factory par parked vehicle Available for Sale nahi ho sakti. Pehle showroom/dealer select karein.');
         }
       }
 
@@ -72,6 +74,10 @@ export default async function handler(req,res){
       // local Repo update remains authoritative, while the response exposes
       // the bridge result so the UI can report a sync problem.
       let webhook={ok:true};
+      // These two were referenced below but never declared, so the webhook always threw a ReferenceError
+      // (swallowed by the catch) and GRD never received Available for Sale / Hold updates.
+      const finalDealerId=effectiveDealerId;
+      const finalStatus=effectiveStatus;
       try{
         const dealerRow=finalDealerId
           ? await s.from('dealer_master').select('dealer_name,dealer_code,grd_dealer_id').eq('id',finalDealerId).maybeSingle()

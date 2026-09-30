@@ -40,6 +40,7 @@ export default function RepoCases(){
      });
      const d=await r.json().catch(()=>({}));
      if(!r.ok||!d.success)throw new Error(d.error||'Could not update Repo');
+     if(d.webhook&&d.webhook.ok===false)setError('Repo CHFPL me update ho gaya, lekin GRD sync fail hua: '+(d.webhook.error||'unknown error'));
 
      setRows(x=>x.map(row=>{
        if(row.id!==id)return row;
@@ -115,6 +116,7 @@ export default function RepoCases(){
      {loading?<tr><td colSpan="13" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="13" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
        const isFactory=norm(r.dealer_master?.dealer_code)==='grd-factory';
+       const isAvailable=String(r.resale_status||'SEIZED').toUpperCase()==='AVAILABLE_FOR_SALE';
        return <tr key={r.id}>
         <td>{fmt(r.repo_date)}<div className="muted">{String(r.repo_time||'').slice(0,5)}</div></td>
         <td><strong>{r.loan_applications?.loan_account_no||r.loan_applications?.application_no||'—'}</strong><div className="muted">{r.loan_applications?.application_no||''}</div></td>
@@ -141,7 +143,8 @@ export default function RepoCases(){
           title="Change parked dealer"
           className="repo-park-select"
          >
-          <option value="factory">GRD Factory</option>
+          {isAvailable&&isFactory&&<option value="" disabled>Select showroom / dealer</option>}
+          {(!isAvailable||isFactory)&&<option value="factory" disabled={isAvailable}>GRD Factory</option>}
           {dealers.map(d=><option key={d.id} value={d.id}>{d.dealer_name||'Unnamed Dealer'}</option>)}
          </select>
          {isFactory&&String(r.resale_status||'SEIZED').toUpperCase()==='SEIZED'&&<div className="muted" style={{marginTop:4,fontSize:10}}>Factory par vehicle HOLD rahega. Available karne se pehle showroom/dealer select karein.</div>}
