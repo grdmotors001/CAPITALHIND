@@ -113,7 +113,7 @@ export default function RepoCases(){
    <div className="admin-table-wrap"><table className="admin-table">
     <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Park At / Showroom</th></tr></thead>
     <tbody>
-     {loading?<tr><td colSpan="13" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
+     {loading?<tr><td colSpan="13" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="13" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
        const isFactory=norm(r.dealer_master?.dealer_code)==='grd-factory';
        return <tr key={r.id}>
@@ -126,7 +126,7 @@ export default function RepoCases(){
         <td>{r.toolkit||'—'}</td>
         <td>{String(r.resale_status||'SEIZED').toUpperCase()==='SOLD'
           ? <strong style={{color:'#1f7a45'}}>Sold</strong>
-          : <select style={{minWidth:150}} value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}>
+          : <select className="repo-status-select" value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}>
              <option value="SEIZED">HOLD</option>
              <option value="AVAILABLE_FOR_SALE" disabled={isFactory}>Available for Sale</option>
             </select>}
@@ -140,7 +140,7 @@ export default function RepoCases(){
           value={selectedDealer?.id|| (isFactory?'factory':'')}
           onChange={e=>updateRepo(r.id,{parked_dealer_id:e.target.value||'factory'})}
           title="Change parked dealer"
-          style={{minWidth:170}}
+          className="repo-park-select"
          >
           <option value="factory">GRD Factory</option>
           {dealers.map(d=><option key={d.id} value={d.id}>{d.dealer_name||'Unnamed Dealer'}</option>)}
