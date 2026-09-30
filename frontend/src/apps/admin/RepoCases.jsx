@@ -5,7 +5,7 @@ const fmt=v=>v?String(v).slice(0,10):'—';
 const norm=v=>String(v||'').trim().toLowerCase();
 
 export default function RepoCases(){
- const [rows,setRows]=useState([]),[dealers,setDealers]=useState([]),[search,setSearch]=useState(''),[loading,setLoading]=useState(true),[error,setError]=useState('');
+ const [rows,setRows]=useState([]),[dealers,setDealers]=useState([]),[search,setSearch]=useState(''),[statusTab,setStatusTab]=useState('ALL'),[loading,setLoading]=useState(true),[error,setError]=useState('');
 
  function dealerForRow(row){
    const parked=row.dealer_master||{};
@@ -79,8 +79,9 @@ export default function RepoCases(){
 
  const filtered=useMemo(()=>{
    const q=search.trim().toLowerCase();
-   if(!q)return rows;
-   return rows.filter(r=>[
+   const byStatus=statusTab==='ALL'?rows:rows.filter(r=>String(r.resale_status||'SEIZED').toUpperCase()===statusTab);
+   if(!q)return byStatus;
+   return byStatus.filter(r=>[
      r.vehicle_no,r.loan_applications?.application_no,r.loan_applications?.loan_account_no,
      r.loan_applications?.customer_profiles?.full_name,r.loan_applications?.customer_profiles?.phone,
      r.dealer_master?.dealer_name,r.field_executive?.full_name,r.battery_master?.battery_name
@@ -95,7 +96,19 @@ export default function RepoCases(){
   {error&&<div className="admin-alert error">⚠ {error}</div>}
   <section className="admin-card staff-list-card">
    <div className="admin-card-title"><div><h2>Repo Register</h2><span>Complete vehicle repossession history</span></div><button className="admin-btn secondary" onClick={load} disabled={loading}>↻ Refresh</button></div>
-   <div style={{padding:'14px 0'}}><input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔎 Search vehicle / customer / mobile / loan / FI / dealer" /></div>
+   <div style={{padding:'14px 0 10px'}}><input className="admin-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔎 Search vehicle / customer / mobile / loan / FI / dealer" /></div>
+   <div style={{display:'flex',gap:8,flexWrap:'wrap',padding:'0 0 14px'}}>
+    {[
+      ['ALL','All'],['SEIZED','Hold'],['AVAILABLE_FOR_SALE','Available for Sale'],['SOLD','Sold']
+    ].map(([key,label])=>{
+      const count=key==='ALL'?rows.length:rows.filter(r=>String(r.resale_status||'SEIZED').toUpperCase()===key).length;
+      return <button key={key} type="button" onClick={()=>setStatusTab(key)} className="admin-btn secondary" style={{
+        borderColor:statusTab===key?'#5b21b6':'#e5dcf5',
+        background:statusTab===key?'#f0e7ff':'#fff',
+        fontWeight:statusTab===key?800:600
+      }}>{label} <span style={{marginLeft:4,opacity:.75}}>{count}</span></button>
+    })}
+   </div>
    <div className="admin-table-wrap"><table className="admin-table">
     <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Parked At</th></tr></thead>
     <tbody>
@@ -109,7 +122,7 @@ export default function RepoCases(){
         <td><strong>{r.vehicle_no||'—'}</strong><div className="muted">{r.model_name||'—'}</div></td>
         <td>{r.colour||'—'}</td>
         <td>{r.toolkit||'—'}</td>
-        <td><select value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}><option value="SEIZED">HOLD</option><option value="AVAILABLE_FOR_SALE">Available for Sale</option><option value="ALLOCATED_TO_GRD">Allocated to GRD</option><option value="SOLD">Sold</option></select></td>
+        <td><select disabled={String(r.resale_status||'SEIZED').toUpperCase()==='SOLD'} style={{minWidth:150}} value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}><option value="SEIZED">HOLD</option><option value="AVAILABLE_FOR_SALE">Available for Sale</option></select></td>
         <td>{r.field_executive?.full_name||'—'}</td>
         <td>{r.battery_available?(`${r.battery_master?.battery_name||'—'} · ${r.battery_no||'—'}`):'No'}</td>
         <td>{r.rc_available?'Yes':'No'}</td>
