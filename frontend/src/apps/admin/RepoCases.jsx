@@ -124,7 +124,13 @@ export default function RepoCases(){
         <td><strong>{r.vehicle_no||'—'}</strong><div className="muted">{r.model_name||'—'}</div></td>
         <td>{r.colour||'—'}</td>
         <td>{r.toolkit||'—'}</td>
-        <td><select disabled={String(r.resale_status||'SEIZED').toUpperCase()==='SOLD'} style={{minWidth:150}} value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}><option value="SEIZED">HOLD</option><option value="AVAILABLE_FOR_SALE">Available for Sale</option></select></td>
+        <td>{String(r.resale_status||'SEIZED').toUpperCase()==='SOLD'
+          ? <strong style={{color:'#1f7a45'}}>Sold</strong>
+          : <select style={{minWidth:150}} value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}>
+             <option value="SEIZED">HOLD</option>
+             <option value="AVAILABLE_FOR_SALE" disabled={isFactory}>Available for Sale</option>
+            </select>}
+        </td>
         <td>{r.field_executive?.full_name||'—'}</td>
         <td>{r.battery_available?(`${r.battery_master?.battery_name||'—'} · ${r.battery_no||'—'}`):'No'}</td>
         <td>{r.rc_available?'Yes':'No'}</td>
