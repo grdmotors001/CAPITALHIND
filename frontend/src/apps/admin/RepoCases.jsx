@@ -86,7 +86,6 @@ export default function RepoCases(){
      r.loan_applications?.customer_profiles?.full_name,r.loan_applications?.customer_profiles?.phone,
      r.dealer_master?.dealer_name,r.field_executive?.full_name,r.battery_master?.battery_name
      ].some(v=>String(v||'').toLowerCase().includes(q));
-   });
  },[rows,search,statusTab]);
 
  return <div className="admin-page">
