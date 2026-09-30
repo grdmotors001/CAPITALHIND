@@ -113,13 +113,14 @@ export default function RepoCases(){
    <div className="admin-table-wrap"><table className="admin-table">
     <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Park At / Showroom</th></tr></thead>
     <tbody>
-     {loading?<tr><td colSpan="12" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
+     {loading?<tr><td colSpan="13" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
        const isFactory=norm(r.dealer_master?.dealer_code)==='grd-factory';
        return <tr key={r.id}>
         <td>{fmt(r.repo_date)}<div className="muted">{String(r.repo_time||'').slice(0,5)}</div></td>
         <td><strong>{r.loan_applications?.loan_account_no||r.loan_applications?.application_no||'—'}</strong><div className="muted">{r.loan_applications?.application_no||''}</div></td>
         <td>{r.loan_applications?.customer_profiles?.full_name||'—'}<div className="muted">{r.loan_applications?.customer_profiles?.phone||''}</div></td>
+        <td>{r.loan_applications?.dealer_name||r.loan_applications?.dealer_master?.dealer_name||'—'}</td>
         <td><strong>{r.vehicle_no||'—'}</strong><div className="muted">{r.model_name||'—'}</div></td>
         <td>{r.colour||'—'}</td>
         <td>{r.toolkit||'—'}</td>
