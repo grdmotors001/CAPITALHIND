@@ -175,6 +175,49 @@ export async function resolveParkedDealer(supabase, dealerId, masters = null) {
   }
 }
 
+export async function sendRepoVehicleWebhook(vehicle) {
+  const secret = process.env.CHFPL_GRD_BRIDGE_SECRET || process.env.GRD_BRIDGE_SECRET || '';
+  if (!secret) throw new Error('CHFPL_GRD_BRIDGE_SECRET is not configured');
+
+  const url = String(
+    process.env.GRD_REPO_VEHICLE_WEBHOOK_URL ||
+    'https://grdnew.vercel.app/api/repo-vehicle-webhook'
+  ).trim();
+
+  const payload = {
+    vehicle: {
+      id: vehicle.id,
+      vehicle_no: vehicle.vehicle_no || '',
+      model_name: vehicle.model_name || '',
+      colour: vehicle.colour || '',
+      toolkit: vehicle.toolkit || '',
+      battery_maker: vehicle.battery_maker || '',
+      battery_no: vehicle.battery_no || '',
+      repo_date: vehicle.repo_date || null,
+      resale_status: vehicle.resale_status || 'SEIZED',
+      dealer_code: vehicle.dealer_code || '',
+      dealer_name: vehicle.dealer_name || 'GRD Factory',
+      grd_dealer_id: vehicle.grd_dealer_id || null,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-GRD-BRIDGE-SECRET': secret,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.success === false) {
+    throw new Error(data.error || `GRD Repo webhook failed (${response.status})`);
+  }
+  return { ok: true, status: response.status, data };
+}
+
 export function mapGrdModels(data) {
   return (data.models || []).map((m) => ({
     id: m.id,
