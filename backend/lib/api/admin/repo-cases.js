@@ -71,6 +71,10 @@ export default async function handler(req,res){
         const finalStatus=Object.prototype.hasOwnProperty.call(patch,'resale_status')
           ? patch.resale_status
           : data.resale_status;
+        const finalDealerCode=String((await s.from('dealer_master').select('dealer_code').eq('id',finalDealerId).maybeSingle()).data?.dealer_code||'').trim().toUpperCase();
+        if(finalStatus==='AVAILABLE_FOR_SALE' && finalDealerCode==='GRD-FACTORY'){
+          return sendError(res,409,'Factory par parked vehicle Available for Sale nahi ho sakti. Pehle showroom/dealer select karein.');
+        }
         const dealerRow=finalDealerId
           ? await s.from('dealer_master').select('dealer_name,dealer_code,grd_dealer_id').eq('id',finalDealerId).maybeSingle()
           : {data:null};
@@ -101,13 +105,20 @@ export default async function handler(req,res){
       id, loan_application_id, repo_date, repo_time, seized_by_fe_id, vehicle_no, resale_status,
       battery_available, battery_no, battery_master_id, rc_available, charger_available,
       parked_dealer_id, remarks, created_at,
-      loan_applications(application_no,loan_account_no,application_status,case_status,customer_profiles(full_name,phone)),
+      loan_applications(application_no,loan_account_no,application_status,case_status,dealer_id,customer_profiles(full_name,phone)),
       battery_master(battery_name), dealer_master(dealer_name,dealer_code,grd_dealer_id)
     `).order('repo_date',{ascending:false}).order('repo_time',{ascending:false}).limit(500);
 
     if(error){console.error('[admin/repo-cases]',error.message);return sendError(res,500,'Could not load Repo register.');}
 
     const feIds=[...new Set((data||[]).map(r=>r.seized_by_fe_id).filter(Boolean))];
+    const dealerIds=[...new Set((data||[]).map(r=>r.loan_applications?.dealer_id).filter(Boolean).map(Number))];
+    let loanDealerMap={};
+    if(dealerIds.length){
+      const {data:loanDealers}=await s.from('dealer_master').select('id,dealer_name,dealer_code').in('id',dealerIds);
+      loanDealerMap=Object.fromEntries((loanDealers||[]).map(d=>[String(d.id),d]));
+    }
+
     let feMap={};
     if(feIds.length){
       const {data:fe}=await s.from('users').select('id,full_name,phone').in('id',feIds);
@@ -116,7 +127,7 @@ export default async function handler(req,res){
 
     return res.status(200).json({
       success:true,
-      repossessions:(data||[]).map(r=>({...r,field_executive:feMap[r.seized_by_fe_id]||null}))
+      repossessions:(data||[]).map(r=>({...r,field_executive:feMap[r.seized_by_fe_id]||null,loan_applications:r.loan_applications?{...r.loan_applications,dealer_master:loanDealerMap[String(r.loan_applications.dealer_id)]||null,dealer_name:loanDealerMap[String(r.loan_applications.dealer_id)]?.dealer_name||null}:r.loan_applications}))
     });
   }catch(e){
     console.error('[admin/repo-cases] unhandled',e);
