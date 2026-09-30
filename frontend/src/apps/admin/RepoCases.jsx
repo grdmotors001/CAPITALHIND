@@ -85,8 +85,9 @@ export default function RepoCases(){
      r.vehicle_no,r.loan_applications?.application_no,r.loan_applications?.loan_account_no,
      r.loan_applications?.customer_profiles?.full_name,r.loan_applications?.customer_profiles?.phone,
      r.dealer_master?.dealer_name,r.field_executive?.full_name,r.battery_master?.battery_name
-   ].some(v=>String(v||'').toLowerCase().includes(q)))
- },[rows,search]);
+     ].some(v=>String(v||'').toLowerCase().includes(q));
+   });
+ },[rows,search,statusTab]);
 
  return <div className="admin-page">
   <div className="admin-page-head">
@@ -110,7 +111,7 @@ export default function RepoCases(){
     })}
    </div>
    <div className="admin-table-wrap"><table className="admin-table">
-    <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Parked At</th></tr></thead>
+    <thead><tr><th>Date / Time</th><th>Loan</th><th>Customer</th><th>Dealer</th><th>Vehicle / Model</th><th>Colour</th><th>Toolkit</th><th>Status</th><th>FI</th><th>Battery</th><th>RC</th><th>Charger</th><th>Park At / Showroom</th></tr></thead>
     <tbody>
      {loading?<tr><td colSpan="12" className="empty-cell">Loading Repo register…</td></tr>:filtered.length===0?<tr><td colSpan="12" className="empty-cell">No Repo records found.</td></tr>:filtered.map(r=>{
        const selectedDealer=dealerForRow(r);
@@ -137,6 +138,7 @@ export default function RepoCases(){
           <option value="factory">GRD Factory</option>
           {dealers.map(d=><option key={d.id} value={d.id}>{d.dealer_name||'Unnamed Dealer'}</option>)}
          </select>
+         {isFactory&&String(r.resale_status||'SEIZED').toUpperCase()==='SEIZED'&&<div className="muted" style={{marginTop:4,fontSize:10}}>Factory par vehicle HOLD rahega. Available karne se pehle showroom/dealer select karein.</div>}
         </td>
        </tr>
      })}
