@@ -125,7 +125,7 @@ export default async function handler(req,res){
 
     return res.status(200).json({
       success:true,
-      repossessions:(data||[]).map(r=>({...r,field_executive:feMap[r.seized_by_fe_id]||null,loan_applications:r.loan_applications?{...r.loan_applications,dealer_master:loanDealerMap[String(r.loan_applications.dealer_id)]||null,dealer_name:loanDealerMap[String(r.loan_applications.dealer_id)]?.dealer_name||null}:r.loan_applications}))
+      repossessions:(data||[]).map(r=>({...r,resale_status:String(r.resale_status||'SEIZED').toUpperCase()==='ALLOCATED_TO_GRD'?'SEIZED':(r.resale_status||'SEIZED'),field_executive:feMap[r.seized_by_fe_id]||null,loan_applications:r.loan_applications?{...r.loan_applications,dealer_master:loanDealerMap[String(r.loan_applications.dealer_id)]||null,dealer_name:loanDealerMap[String(r.loan_applications.dealer_id)]?.dealer_name||null}:r.loan_applications}))
     });
   }catch(e){
     console.error('[admin/repo-cases] unhandled',e);
