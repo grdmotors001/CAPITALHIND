@@ -126,7 +126,12 @@ export default function RepoCases(){
         <td>{r.colour||'—'}</td>
         <td>{r.toolkit||'—'}</td>
         <td>{String(r.resale_status||'SEIZED').toUpperCase()==='SOLD'
-          ? <strong style={{color:'#1f7a45'}}>Sold</strong>
+          ? <div><strong style={{color:'#1f7a45'}}>Sold</strong>
+              <div className="muted" style={{fontSize:10,lineHeight:1.5}}>
+                {r.sold_customer_name||'—'} · {fmt(r.sold_date)}<br/>
+                Sale ₹{Number(r.sold_amount||0).toLocaleString('en-IN')} · Loan ₹{Number(r.sold_loan_amount||0).toLocaleString('en-IN')} · Bal ₹{Number(r.sold_balance_amount||0).toLocaleString('en-IN')}<br/>
+                {Number(r.sold_loan_amount||0)>0?('Ledger: '+(r.sold_ledger_no||'—')+' · '):''}DO: {r.sold_do_no||'—'}
+              </div></div>
           : <select className="repo-status-select" value={r.resale_status||'SEIZED'} onChange={e=>updateRepo(r.id,{resale_status:e.target.value})}>
              <option value="SEIZED">HOLD</option>
              <option value="AVAILABLE_FOR_SALE" disabled={isFactory}>Available for Sale</option>

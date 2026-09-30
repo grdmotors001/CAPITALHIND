@@ -32,8 +32,28 @@ export default async function handler(req,res){
         continue;
       }
 
+      const patch={resale_status:status};
+      if(status==='SOLD'){
+        // Sale details from GRD: customer, date, amount, new loan, balance, ledger no (only when loan) and DO no.
+        const n=x=>{const v=Number(x);return Number.isFinite(v)?v:0};
+        const sale=(v.sale&&typeof v.sale==='object')?v.sale:v;
+        const loan=n(sale.loan_amount);
+        const customer=String(sale.customer_name||'').trim();
+        if(!customer){
+          results.push({ok:false,source_ref:ref,error:'customer_name is required for a sale.'});
+          continue;
+        }
+        patch.sold_customer_name=customer;
+        patch.sold_date=String(sale.sale_date||'').slice(0,10)||new Date().toISOString().slice(0,10);
+        patch.sold_amount=n(sale.sale_amount);
+        patch.sold_loan_amount=loan;
+        patch.sold_balance_amount=sale.balance_amount!==undefined&&sale.balance_amount!==''?n(sale.balance_amount):Math.max(0,n(sale.sale_amount)-loan);
+        patch.sold_ledger_no=loan>0?(String(sale.ledger_no||'').trim()||null):null;
+        patch.sold_do_no=String(sale.do_number||sale.do_no||'').trim()||null;
+      }
+
       const {data,error}=await s.from('vehicle_repossessions')
-        .update({resale_status:status})
+        .update(patch)
         .eq('id',ref)
         .select('id,resale_status')
         .maybeSingle();
